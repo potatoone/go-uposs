@@ -89,6 +89,8 @@ go-uposs/
 
 ├── clean.go                    # 清理日志&数据库功能
 
+├── api_config.go         # 查询&推送API配置
+
 ├── minio_client.go         # Minio客户端
 
 ├── oss_config.go           # OSS配置
