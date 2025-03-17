@@ -5,6 +5,7 @@ GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处�
 
 ### **主要功能**
 
+
 1. **图片处理与上传**
    * 从指定源路径复制图片到本地文件夹
    * 支持图片压缩和大小调整
@@ -30,6 +31,7 @@ GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处�
 
 ### **技术栈**
 
+
 1. **Go 语言**：核心编程语言
 2. **Fyne**：GUI 框架，提供跨平台界面支持
 3. **Minio SDK**：与 Minio 对象存储服务交互
@@ -46,6 +48,7 @@ GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处�
 * 提供图形界面修改配置
 
 ### **图片处理流程**
+
 
 1. 从源路径获取图片
 2. 根据配置参数进行压缩和大小调整
@@ -73,33 +76,60 @@ GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处�
 ## **3.项目结构**
 
 go-uposs/
-├── main.go                  # 主程序入口
-├── config.go                # 配置文件处理
-├── auto.go                  # 自动任务相关功能
-├── sched.go                 # 计划任务相关功能
-├── match_copy.go            # 文件夹&文件复制
-├── clean.go                 # 清理日志&数据库功能
-├── minio_client.go          # Minio客户端
-├── oss_config.go            # OSS配置
-├── folder_config.go         # 文件夹配置
-├── about.go                 # 关于页面和其他设置
-├── logger.go                # 日志记录功能
-├── date.go                  # 日期UI组件
-├── pic_handle.go            # 图片压缩功能
-├── utils/                   # 工具函数
-│   ├── passwd.go            # 密码验证功能
-│   ├── path.go              # 路径处理功能
-│   ├── port.go              # 端口监听
-│   ├── divide.go            # 文件名切割
-│   └── autostart.go         # 开机自启动功能
-├── database/                # 数据库相关
+
+├── main.go                     # 主程序入口
+
+├── config.go                  # 配置文件处理
+
+├── auto.go                     # 自动任务相关功能
+
+├── sched.go                   # 计划任务相关功能
+
+├── match_copy.go         # 文件夹&文件复制
+
+├── clean.go                    # 清理日志&数据库功能
+
+├── minio_client.go         # Minio客户端
+
+├── oss_config.go           # OSS配置
+
+├── folder_config.go       # 文件夹配置
+
+├── about.go                   # 关于页面和其他设置
+
+├── logger.go                  # 日志记录功能
+
+├── date.go                     # 日期UI组件
+
+├── pic_handle.go           # 图片压缩功能
+
+├── utils/                          # 工具函数
+
+│   ├── passwd.go          # 密码验证功能
+
+│   ├── path.go               # 路径处理功能
+
+│   ├── port.go                # 端口监听
+
+│   ├── divide.go             # 文件名切割
+
+│   └── autostart.go        # 开机自启动功能
+
+├── database/                 # 数据库相关
+
 │   ├── queries.go           # 数据库查询
-│   └── database.go          # 数据库初始化
-├── data/                    # 资源文件
-│   ├── icon/                # 图标文件
-│   └── config.example.json  # 配置文件
-├── go.mod                   # 依赖管理
-└── go.sum                   # 依赖版本锁定
+
+│   └── database.go       # 数据库初始化
+
+├── data/                         # 资源文件
+
+│   ├── icon/                    # 图标文件
+
+│   └── config.example.json    # 配置文件
+
+├── go.mod                     # 依赖管理
+
+└── go.sum                     # 依赖版本锁定
 
 
 ## 4.开发环境配置
