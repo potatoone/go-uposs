@@ -1,0 +1,24 @@
+# 忽略 Go 编译生成的二进制文件
+*.exe
+*.out
+*.test
+*.a
+
+# 忽略 Go 编译缓存和临时文件
+*.o
+*.so
+*.obj
+*.dll
+
+# 忽略数据库、日志
+*.db
+*.log
+
+# 忽略文件目录
+project/
+
+# Go Modules 缓存（不建议上传）
+/vendor/
+
+# Fyne 编译生成的 app bundle 目录
+fyne_app/
