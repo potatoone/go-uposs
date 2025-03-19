@@ -80,6 +80,8 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		logUploadMessage(fmt.Sprintf("从文件名 %s 解析到的单号: %s", info.Name(), strings.Join(orderNumbers, ", ")), isScheduledTask)
 
 		// 遍历所有解析出的单号，查询API1
+		var validOrderNumber string // 存储第一个有效订单号
+
 		for _, orderNumber := range orderNumbers {
 			for retry := 0; retry < maxRetries; retry++ {
 				// 调用API1进行查询
@@ -95,6 +97,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 				} else if strings.HasPrefix(apiResponse, "200:") {
 					logUploadMessage(fmt.Sprintf("API1查询成功: 单号: %s 有效, 响应: %s", orderNumber, apiResponse), isScheduledTask)
 					validOrderFound = true
+					validOrderNumber = orderNumber // 保存有效的订单号
 					break
 				} else {
 					logUploadMessage(fmt.Sprintf("API1查询返回非200状态: 单号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
@@ -162,7 +165,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		logUploadMessage(fmt.Sprintf("文件访问地址: %s", fileURL), isScheduledTask)
 
 		// 将所有解析出的单号和文件URL推送到API2
-		logUploadMessage(fmt.Sprintf("推送文件到API2: 单号: %s, 地址: %s", strings.Join(orderNumbers, ", "), fileURL), isScheduledTask)
+		logUploadMessage(fmt.Sprintf("推送文件到API2: 有效单号: %s, 地址: %s", validOrderNumber, fileURL), isScheduledTask)
 
 		// 添加重试逻辑
 		maxApi2Retries := 1 // 最大重试次数为1
@@ -170,12 +173,12 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		var api2Err error
 
 		for retry := 0; retry <= maxApi2Retries; retry++ {
-			logUploadMessage(fmt.Sprintf("推送到API2 (第%d次尝试): 单号: %s", retry+1, strings.Join(orderNumbers, ", ")), isScheduledTask)
-			api2Response, api2Err = PushToAPI2(api2URL, orderNumbers, fileURL)
+			logUploadMessage(fmt.Sprintf("推送到API2 (第%d次尝试): 单号: %s", retry+1, validOrderNumber), isScheduledTask)
+			api2Response, api2Err = PushToAPI2(api2URL, validOrderNumber, fileURL)
 
 			if api2Err != nil {
 				logUploadMessage(fmt.Sprintf("推送到API2失败(第%d次尝试): 单号: %s, 错误: %v",
-					retry+1, strings.Join(orderNumbers, ", "), api2Err), isScheduledTask)
+					retry+1, validOrderNumber, api2Err), isScheduledTask)
 				if retry < maxApi2Retries {
 					logUploadMessage("等待20秒后重试推送到API2...", isScheduledTask)
 					time.Sleep(20 * time.Second)
@@ -183,14 +186,14 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 				}
 			} else {
 				logUploadMessage(fmt.Sprintf("推送到API2成功: 单号: %s, 响应: %s",
-					strings.Join(orderNumbers, ", "), api2Response), isScheduledTask)
+					validOrderNumber, api2Response), isScheduledTask)
 				break
 			}
 		}
 
 		if api2Err != nil {
 			logUploadMessage(fmt.Sprintf("推送到API2最终失败: 单号: %s, 所有重试均失败",
-				strings.Join(orderNumbers, ", ")), isScheduledTask)
+				validOrderNumber), isScheduledTask)
 			// 注意：我们不返回错误，允许继续处理并删除文件，因为上传到MinIO已成功
 		}
 
@@ -272,21 +275,40 @@ func QueryAPI1(apiURL, orderNumber string) (string, error) {
 	return fmt.Sprintf("%d:%s", response.Code, string(body)), nil
 }
 
-// PushToAPI2 推送单号和文件URL到API2
-func PushToAPI2(apiURL string, orderNumbers []string, fileURL string) (string, error) {
-	// 将单号数组转换为逗号分隔的字符串
-	orderNumbersStr := strings.Join(orderNumbers, ",")
+// PushToAPI2 推送单号和文件URL到API2，使用POST请求和JSON格式
+func PushToAPI2(apiURL string, orderNumber string, fileURL string) (string, error) {
+	// 创建请求体数据结构
+	requestData := struct {
+		OrderNumber string `json:"orderNumber"`
+		FileURL     string `json:"fileURL"`
+	}{
+		OrderNumber: orderNumber,
+		FileURL:     fileURL,
+	}
 
-	// 构建请求URL
-	requestURL := fmt.Sprintf("%s?orderNumbers=%s&fileURL=%s", apiURL, orderNumbersStr, url.QueryEscape(fileURL))
+	// 将数据结构转换为JSON
+	jsonData, err := json.Marshal(requestData)
+	if err != nil {
+		return "", fmt.Errorf("JSON编码失败: %v", err)
+	}
 
 	// 设置超时时间
 	client := &http.Client{
 		Timeout: 20 * time.Second,
 	}
 
-	// 发送GET请求
-	resp, err := client.Get(requestURL)
+	// 创建POST请求
+	req, err := http.NewRequest("POST", apiURL, strings.NewReader(string(jsonData)))
+	if err != nil {
+		return "", fmt.Errorf("创建请求失败: %v", err)
+	}
+
+	// 设置请求头为JSON
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	// 发送POST请求
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("发送请求失败: %v", err)
 	}
