@@ -160,12 +160,12 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		}
 
 		// 获取文件的公开访问地址
-		fileURL := fmt.Sprintf("%s/%s/%s", client.EndpointURL(), bucketName, minioFilePath)
+		fileUrl := fmt.Sprintf("%s/%s/%s", client.EndpointURL(), bucketName, minioFilePath)
 		logUploadMessage(fmt.Sprintf("文件上传成功: %s -> %s", path, minioFilePath), isScheduledTask)
-		logUploadMessage(fmt.Sprintf("文件访问地址: %s", fileURL), isScheduledTask)
+		logUploadMessage(fmt.Sprintf("文件访问地址: %s", fileUrl), isScheduledTask)
 
-		// 将所有解析出的单号和文件URL推送到API2
-		logUploadMessage(fmt.Sprintf("推送文件到API2: 有效单号: %s, 地址: %s", validOrderNumber, fileURL), isScheduledTask)
+		// 将有效单号和文件URL推送到API2
+		logUploadMessage(fmt.Sprintf("推送文件到API2: 有效单号: %s, 地址: %s", validOrderNumber, fileUrl), isScheduledTask)
 
 		// 添加重试逻辑
 		maxApi2Retries := 1 // 最大重试次数为1
@@ -174,7 +174,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 
 		for retry := 0; retry <= maxApi2Retries; retry++ {
 			logUploadMessage(fmt.Sprintf("推送到API2 (第%d次尝试): 单号: %s", retry+1, validOrderNumber), isScheduledTask)
-			api2Response, api2Err = PushToAPI2(api2URL, validOrderNumber, fileURL)
+			api2Response, api2Err = PushToAPI2(api2URL, validOrderNumber, fileUrl)
 
 			if api2Err != nil {
 				logUploadMessage(fmt.Sprintf("推送到API2失败(第%d次尝试): 单号: %s, 错误: %v",
@@ -276,14 +276,14 @@ func QueryAPI1(apiURL, orderNumber string) (string, error) {
 }
 
 // PushToAPI2 推送单号和文件URL到API2，使用POST请求和JSON格式
-func PushToAPI2(apiURL string, orderNumber string, fileURL string) (string, error) {
+func PushToAPI2(apiURL string, orderNumber string, fileUrl string) (string, error) {
 	// 创建请求体数据结构
 	requestData := struct {
 		OrderNumber string `json:"orderNumber"`
-		FileURL     string `json:"fileURL"`
+		FileUrl     string `json:"fileUrl"`
 	}{
 		OrderNumber: orderNumber,
-		FileURL:     fileURL,
+		FileUrl:     fileUrl,
 	}
 
 	// 将数据结构转换为JSON
@@ -318,6 +318,25 @@ func PushToAPI2(apiURL string, orderNumber string, fileURL string) (string, erro
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("读取响应失败: %v", err)
+	}
+
+	// 解析JSON响应
+	var response struct {
+		Code      int         `json:"code"`
+		Msg       string      `json:"msg"`
+		Data      interface{} `json:"data"`
+		Timestamp string      `json:"timestamp"`
+		TraceId   interface{} `json:"traceId"`
+	}
+
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return string(body), fmt.Errorf("解析JSON响应失败: %v", err)
+	}
+
+	// 检查响应状态码
+	if response.Code != 200 {
+		return string(body), fmt.Errorf("API2响应状态码非200: %d, 消息: %s", response.Code, response.Msg)
 	}
 
 	return string(body), nil

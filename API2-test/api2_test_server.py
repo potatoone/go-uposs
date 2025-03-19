@@ -33,31 +33,30 @@ class API2Handler(BaseHTTPRequestHandler):
             print(f"请求体: {json.dumps(json_data, indent=2, ensure_ascii=False)}")
             
             # 检查是否包含必要的字段
-            order_number = json_data.get("orderNumber", "")  # 改为单数形式
-            file_url = json_data.get("fileURL", "")
+            order_number = json_data.get("orderNumber", "")
+            file_url = json_data.get("fileUrl", "")  # 注意: fileUrl 使用小写 u
             
             # 记录到控制台
-            print(f"订单号: {order_number}")  # 修改为单数
+            print(f"订单号: {order_number}")
             print(f"文件URL: {file_url}")
             
             # 写入日志文件
             log_entry = {
                 "timestamp": timestamp,
                 "orderNumber": order_number,
-                "fileURL": file_url
+                "fileUrl": file_url
             }
             with open(LOG_FILE, 'a', encoding='utf-8') as f:
                 f.write(json.dumps(log_entry, ensure_ascii=False) + "\n")
             
-            # 返回成功响应
+            # 返回成功响应 - 使用与真实API2相同的响应格式
             self._set_headers()
             response = {
                 "code": 200,
-                "message": "推送成功",
-                "receivedData": {
-                    "orderNumber": order_number,
-                    "fileURL": file_url
-                }
+                "msg": "succeed",
+                "data": None,
+                "timestamp": str(int(time.time())),
+                "traceId": None
             }
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode())
             
@@ -65,8 +64,11 @@ class API2Handler(BaseHTTPRequestHandler):
             print("错误: 无效的JSON格式")
             self._set_headers(400)
             response = {
-                "code": 400, 
-                "message": "无效的JSON格式"
+                "code": 400,
+                "msg": "无效的JSON格式",
+                "data": None,
+                "timestamp": str(int(time.time())),
+                "traceId": None
             }
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode())
         except Exception as e:
@@ -74,7 +76,10 @@ class API2Handler(BaseHTTPRequestHandler):
             self._set_headers(500)
             response = {
                 "code": 500,
-                "message": f"服务器内部错误: {str(e)}"
+                "msg": f"服务器内部错误: {str(e)}",
+                "data": None,
+                "timestamp": str(int(time.time())),
+                "traceId": None
             }
             self.wfile.write(json.dumps(response, ensure_ascii=False).encode())
 
@@ -84,7 +89,7 @@ def run_server():
     print(f"API2 测试服务器启动在 http://localhost:{PORT}")
     print("推送接口: POST http://localhost:3001")
     # 修改预期数据结构
-    print('预期数据格式: { "orderNumber": "订单号", "fileURL": "图片URL" }')
+    print('预期数据格式: { "orderNumber": "订单号", "fileUrl": "图片URL" }')
     httpd.serve_forever()
 
 if __name__ == '__main__':
