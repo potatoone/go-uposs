@@ -175,6 +175,9 @@ csdn安装参考 <https://blog.csdn.net/iamhuanyu/article/details/129670053>
 
 安装 Fyne 库 `go get fyne.io/fyne/v2` `go get fyne.io/fyne/v2/dialog`
 
+### 运行调试
+go run main.go minio_client.go logger.go about.go clean.go config.go api_config.go oss_config.go folder_config.go pic_config.go date.go schedui.go autotaskui.go pic_handle.go match_copy.go upload.go
+
 ### 打包EXE
 
 安装Fyne的命令行工具 
