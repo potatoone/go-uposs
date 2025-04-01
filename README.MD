@@ -193,4 +193,3 @@ fyne package -os windows -icon .\data\icon\icon.png -name "GO-UPOSS"
 
 `fyne package -os windows -icon .\data\icon\icon.ico -name "GO-UPOSS" -appID "com.apotato.go-uposs" -release`
 
-`fyne package -os windows -icon .\data\icon\icon.ico -name "GO-UPOSS" -appID "com.apotato.go-uposs" -release`
