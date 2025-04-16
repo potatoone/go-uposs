@@ -23,7 +23,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 	}
 
 	logOutput := widget.NewMultiLineEntry()
-	logOutput.SetMinRowsVisible(4)
+	logOutput.SetMinRowsVisible(5)
 
 	// 直接将日期选择UI放在界面上，使用专门的清理日期UI
 	dateUI := CreateCleanDateUI(win, config)

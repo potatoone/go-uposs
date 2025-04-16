@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-uposs/utils"
 	"strconv"
 	"time" // 添加时间包
 
@@ -18,18 +19,25 @@ const (
 
 // 创建一个标签和输入框并排的组件，后面附加单位
 func createLabeledEntryWithUnit(labelText string, entry *widget.Entry, unit string) fyne.CanvasObject {
+	// 创建标签
 	label := widget.NewLabelWithStyle(labelText, fyne.TextAlignLeading, fyne.TextStyle{})
-	labelContainer := container.NewGridWrap(fyne.NewSize(piclabelWidth, label.MinSize().Height), label)
+	// 固定标签宽度和高度（使用 utils.LEBHeight）
+	labelContainer := container.NewGridWrap(fyne.NewSize(piclabelWidth, utils.LEBHeight), label)
 
-	// 固定文本框宽度
-	entryContainer := container.NewGridWrap(fyne.NewSize(picentryWidth, entry.MinSize().Height), entry)
+	// 固定输入框宽度和高度（使用 utils.LEBHeight）
+	entryContainer := container.NewGridWrap(fyne.NewSize(picentryWidth, utils.LEBHeight), entry)
 
-	// 创建单位标签
+	// 创建单位标签（例如：KB、px）
 	unitLabel := widget.NewLabel(unit)
-	unitLabelContainer := container.NewGridWrap(fyne.NewSize(50, unitLabel.MinSize().Height), unitLabel)
+	// 单位标签的高度固定为 LEBHeight
+	unitLabelContainer := container.NewGridWrap(fyne.NewSize(60, utils.LEBHeight), unitLabel)
 
-	// 将输入框和单位标签并排
-	return container.NewHBox(labelContainer, entryContainer, unitLabelContainer)
+	// 将三个组件并排布局
+	return container.NewHBox(
+		labelContainer,
+		entryContainer,
+		unitLabelContainer,
+	)
 }
 
 // 创建图片配置界面的 UI
@@ -60,7 +68,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建一个日志输出框（多行文本框）
 	logOutput := widget.NewMultiLineEntry()
-	logOutput.SetMinRowsVisible(14) // 设置日志文本框可见行数
+	logOutput.SetMinRowsVisible(17) // 设置日志文本框可见行数
 	logOutput.SetText("")           // 确保初始文本为空，没有空行
 
 	// 添加日志到UI和系统日志
@@ -135,7 +143,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	})
 
 	// 将按钮放在一个容器中，并设置宽度和高度
-	buttonContainer := container.NewGridWrap(fyne.NewSize(200, 75), confirmButton)
+	buttonContainer := container.NewGridWrap(fyne.NewSize(200, 69), confirmButton)
 
 	// 使用 createLabeledEntryWithUnit 函数将标签和输入框组合成水平排列的组件
 	compressBox := createLabeledEntryWithUnit("图片质量：", compressInput, "%")

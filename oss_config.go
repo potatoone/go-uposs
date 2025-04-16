@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-uposs/utils"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -33,10 +34,10 @@ const (
 // 创建一个标签和输入框并排的组件
 func labeledEntry(labelText string, entry *widget.Entry) fyne.CanvasObject {
 	label := widget.NewLabelWithStyle(labelText, fyne.TextAlignLeading, fyne.TextStyle{})
-	labelContainer := container.NewGridWrap(fyne.NewSize(labelWidth, label.MinSize().Height), label)
+	labelContainer := container.NewGridWrap(fyne.NewSize(labelWidth, utils.LEBHeight), label)
 
 	// 固定文本框宽度
-	entryContainer := container.NewGridWrap(fyne.NewSize(entryWidth, entry.MinSize().Height), entry)
+	entryContainer := container.NewGridWrap(fyne.NewSize(entryWidth, utils.LEBHeight), entry)
 
 	return container.NewHBox(labelContainer, entryContainer)
 }
@@ -107,7 +108,7 @@ func refreshConfig() {
 // CreateUI 创建 UI 界面
 func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 设置日志文本框
-	logText.SetMinRowsVisible(10)
+	logText.SetMinRowsVisible(12)
 	logText.SetText("") // 清空初始内容
 
 	// 初始化文本框内容
@@ -144,10 +145,10 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建按钮容器，按钮上下排列，并设置按钮的尺寸
 	buttonContainer := container.NewVBox(
-		container.NewGridWrap(fyne.NewSize(140, machineCodeEntry.MinSize().Height), useSSLCheck),
-		container.NewGridWrap(fyne.NewSize(140, machineCodeEntry.MinSize().Height), refreshButton),
-		container.NewGridWrap(fyne.NewSize(140, machineCodeEntry.MinSize().Height), saveButton),
-		container.NewGridWrap(fyne.NewSize(140, machineCodeEntry.MinSize().Height), testButton),
+		container.NewGridWrap(fyne.NewSize(140, utils.LEBHeight), useSSLCheck),
+		container.NewGridWrap(fyne.NewSize(140, utils.LEBHeight), refreshButton),
+		container.NewGridWrap(fyne.NewSize(140, utils.LEBHeight), saveButton),
+		container.NewGridWrap(fyne.NewSize(140, utils.LEBHeight), testButton),
 	)
 
 	// 创建配置文本框容器

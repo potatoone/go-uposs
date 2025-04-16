@@ -40,7 +40,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	dateUI := CreateDateUI(myWindow, config)
 
 	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(14)
+	schedLogText.SetMinRowsVisible(16)
 
 	// 初始化进度条并
 	progressBar = widget.NewProgressBarInfinite()
@@ -189,7 +189,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 设置输入框的宽度
 	schedIntervalContainer := container.NewHBox(
 		intervalLabel,
-		container.NewGridWrap(fyne.NewSize(120, schedIntervalEntry.MinSize().Height), schedIntervalEntry),
+		container.NewGridWrap(fyne.NewSize(120, utils.LEBHeight), schedIntervalEntry),
 		sLabel,
 	)
 

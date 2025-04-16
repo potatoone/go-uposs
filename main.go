@@ -105,6 +105,10 @@ func main() {
 	myApp := app.NewWithID("com.apotato.gouposs")
 	myWindow := myApp.NewWindow("IMG Upload To Minio")
 
+	// 设置自定义主题
+	customTheme, _ := utils.NewCustomTheme()
+	myApp.Settings().SetTheme(customTheme)
+
 	// 创建自动执行 UI
 	autoTaskUI := createautoTaskUI(myWindow, config)
 

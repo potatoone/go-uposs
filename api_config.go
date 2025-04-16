@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-uposs/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -71,7 +72,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
-	apiLogText.SetMinRowsVisible(16)
+	apiLogText.SetMinRowsVisible(19)
 
 	// 添加日志到 UI 和系统日志的函数
 	logToUIAndSystem := func(message string) {
@@ -155,18 +156,18 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建输入框的容器
 	api1Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), api1Label.MinSize().Height), api1Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), api1Entry.MinSize().Height), api1Entry),
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Label),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1Entry),
 	)
 
 	api2Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), api2Label.MinSize().Height), api2Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), api2Entry.MinSize().Height), api2Entry),
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api2Label),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api2Entry),
 	)
 
 	// 将保存和测试按钮放在垂直容器中，放在右侧
 	buttonWidth := 150
-	buttonHeight := 35
+	buttonHeight := 32
 
 	// 设置按钮宽度和高度
 	saveButtonContainer := container.NewGridWrap(

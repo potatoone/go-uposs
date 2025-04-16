@@ -149,7 +149,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	systemTimeLabel := widget.NewLabel("系统时间:")
 
 	// 设置日志文本框
-	autoLogText.SetMinRowsVisible(16)
+	autoLogText.SetMinRowsVisible(19)
 
 	// 初始化进度条
 	autoProgressBar = widget.NewProgressBarInfinite()
@@ -215,7 +215,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	// 设置输入框的宽度
 	schedIntervalContainer := container.NewHBox(
 		intervalLabel,
-		container.NewGridWrap(fyne.NewSize(150, schedIntervalEntry.MinSize().Height), schedIntervalEntry),
+		container.NewGridWrap(fyne.NewSize(150, utils.LEBHeight), schedIntervalEntry),
 		sLabel,
 	)
 
@@ -243,7 +243,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	})
 
 	// 设置按钮的宽度
-	saveButtonContainer := container.NewGridWrap(fyne.NewSize(150, saveButton.MinSize().Height), saveButton)
+	saveButtonContainer := container.NewGridWrap(fyne.NewSize(150, utils.LEBHeight), saveButton)
 
 	// 创建按钮容器，按钮上下排列，并设置按钮的尺寸
 	intervalContainer := container.NewBorder(nil, nil, nil, nil, container.NewHBox(

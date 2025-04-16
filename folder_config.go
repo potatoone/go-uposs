@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-uposs/utils"
 	"os"
 	"strconv"
 	"strings"
@@ -27,11 +28,12 @@ var (
 
 // 创建一个标签和输入框并排的组件
 func fdlabeledEntry(labelText string, entry *widget.Entry) fyne.CanvasObject {
+	// 创建标签，并设置固定高度
 	label := widget.NewLabelWithStyle(labelText, fyne.TextAlignLeading, fyne.TextStyle{})
-	labelContainer := container.NewGridWrap(fyne.NewSize(fdlabelWidth, label.MinSize().Height), label)
+	labelContainer := container.NewGridWrap(fyne.NewSize(fdlabelWidth, utils.LEBHeight), label) // 设置标签的宽度和高度
 
-	// 固定文本框宽度
-	entryContainer := container.NewGridWrap(fyne.NewSize(fdentryWidth, entry.MinSize().Height), entry)
+	// 创建输入框，并设置固定高度
+	entryContainer := container.NewGridWrap(fyne.NewSize(fdentryWidth, utils.LEBHeight), entry) // 设置输入框的宽度和高度
 
 	return container.NewHBox(labelContainer, entryContainer)
 }
@@ -45,7 +47,7 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 
 	// 清空日志框
 	folderLogText.SetText("")
-	folderLogText.SetMinRowsVisible(14) // 设置日志显示的行数，保持与其他页面一致
+	folderLogText.SetMinRowsVisible(17) // 设置日志显示的行数，保持与其他页面一致
 
 	// 添加日志到UI和系统日志的函数
 	logToUIAndSystem := func(message string) {
@@ -130,8 +132,8 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 
 	// 创建按钮容器，按钮上下排列，并设置按钮的尺寸
 	buttonContainer := container.NewVBox(
-		container.NewGridWrap(fyne.NewSize(150, 55), saveButton),
-		container.NewGridWrap(fyne.NewSize(150, 55), scanButton),
+		container.NewGridWrap(fyne.NewSize(150, 50), saveButton),
+		container.NewGridWrap(fyne.NewSize(150, 50), scanButton),
 	)
 
 	// 将输入框和按钮容器左右布局，并确保对齐
