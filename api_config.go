@@ -66,9 +66,13 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	api2Entry := widget.NewEntry()
 	api2Entry.SetText(config.API2)
 
+	webhookEntry := widget.NewEntry()
+	webhookEntry.SetText(config.WebhookURL)
+
 	// 创建标签
 	api1Label := widget.NewLabel("API 1:")
 	api2Label := widget.NewLabel("API 2:")
+	webhookLabel := widget.NewLabel("Webhook URL:")
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
@@ -95,6 +99,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			if confirm {
 				config.API1 = api1Entry.Text
 				config.API2 = api2Entry.Text
+				config.WebhookURL = webhookEntry.Text
 
 				// 直接使用文件名，不构建路径
 				if err := SaveConfig("config.json", config); err != nil {
@@ -151,7 +156,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	})
 
 	// 设置标签和输入框的宽度
-	labelWidth := 70
+	labelWidth := 120
 	entryWidth := 500 // 减小输入框宽度，为右侧按钮腾出空间
 
 	// 创建输入框的容器
@@ -163,6 +168,11 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	api2Container := container.NewHBox(
 		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api2Label),
 		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api2Entry),
+	)
+
+	webhookContainer := container.NewHBox(
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), webhookLabel),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), webhookEntry),
 	)
 
 	// 将保存和测试按钮放在垂直容器中，放在右侧
@@ -194,6 +204,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	inputsContainer := container.NewVBox(
 		api1Container,
 		api2Container,
+		webhookContainer,
 	)
 
 	// 创建顶部容器，将输入框容器和右侧按钮容器组合

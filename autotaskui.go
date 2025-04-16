@@ -104,9 +104,16 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 						if err.Error() == "无文件可上传" {
 							AutoLogToFile("无文件可上传")
 						} else {
-							AutoLogToFile(fmt.Sprintf("上传图片失败: %v", err))
-							updateUIOnTaskEnd()
-							return
+							AutoLogToFile(fmt.Sprintf("上传图片失败: %v，\n20 秒后重试一次...", err))
+							time.Sleep(20 * time.Second) // 等待 20 秒再试一次
+
+							// 再次尝试
+							err = UploadImagesWithTaskType(newConfig, false)
+							if err != nil {
+								AutoLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
+							} else {
+								AutoLogToFile("重试成功，所有图片上传完成")
+							}
 						}
 					} else {
 						AutoLogToFile("所有图片上传完成")
