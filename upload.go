@@ -18,7 +18,8 @@ import (
 )
 
 // UploadImagesToMinio 上传本地路径中的所有图片到 MinIO
-func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath string, api1URL, api2URL string, isScheduledTask bool) error {
+func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath string, api1URL, api2URL string, isScheduledTask bool, config *Config) error {
+
 	// 检查存储桶是否存在，若不存在则创建
 	exists, err := client.BucketExists(context.Background(), bucketName)
 	if err != nil {
@@ -159,8 +160,8 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 			return fmt.Errorf("上传文件失败: %v", err)
 		}
 
-		// 获取文件的公开访问地址
-		fileUrl := fmt.Sprintf("%s/%s/%s", client.EndpointURL(), bucketName, minioFilePath)
+		// 获取文件的公开访问地址,直接使用配置的的 ublicUrl 构造
+		fileUrl := fmt.Sprintf("%s/%s/%s", config.PublicUrl, bucketName, minioFilePath)
 		logUploadMessage(fmt.Sprintf("文件上传成功: %s -> %s", path, minioFilePath), isScheduledTask)
 		logUploadMessage(fmt.Sprintf("文件访问地址: %s", fileUrl), isScheduledTask)
 
@@ -187,6 +188,14 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 			} else {
 				logUploadMessage(fmt.Sprintf("推送到API2成功: 单号: %s, 响应: %s",
 					validOrderNumber, api2Response), isScheduledTask)
+				// 删除本地文件
+				logUploadMessage(fmt.Sprintf("正在删除本地文件: %s", path), isScheduledTask)
+				err = os.Remove(path)
+				if err != nil {
+					logUploadMessage(fmt.Sprintf("删除本地文件失败: %s, 错误: %v", path, err), isScheduledTask)
+					return fmt.Errorf("删除本地文件失败: %v", err)
+				}
+				logUploadMessage(fmt.Sprintf("本地文件已删除: %s", path), isScheduledTask)
 				break
 			}
 		}
@@ -196,15 +205,6 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 				validOrderNumber), isScheduledTask)
 			// 注意：我们不返回错误，允许继续处理并删除文件，因为上传到MinIO已成功
 		}
-
-		// 删除本地文件
-		logUploadMessage(fmt.Sprintf("正在删除本地文件: %s", path), isScheduledTask)
-		err = os.Remove(path)
-		if err != nil {
-			logUploadMessage(fmt.Sprintf("删除本地文件失败: %s, 错误: %v", path, err), isScheduledTask)
-			return fmt.Errorf("删除本地文件失败: %v", err)
-		}
-		logUploadMessage(fmt.Sprintf("本地文件已删除: %s", path), isScheduledTask)
 
 		return nil
 	})
@@ -387,7 +387,7 @@ func UploadImagesWithTaskType(config *Config, isScheduledTask bool) error {
 	logUploadMessage(fmt.Sprintf("开始上传图片，本地路径: %s, MinIO路径: %s", localPath, minioPath), isScheduledTask)
 
 	// 上传图片并将日志指向正确的日志文件
-	if err := UploadImagesToMinio(client, bucketName, localPath, minioPath, api1URL, api2URL, isScheduledTask); err != nil {
+	if err := UploadImagesToMinio(client, bucketName, localPath, minioPath, api1URL, api2URL, isScheduledTask, config); err != nil {
 		return fmt.Errorf("上传图片失败: %v", err)
 	}
 

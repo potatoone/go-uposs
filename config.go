@@ -13,7 +13,8 @@ import (
 type Config struct {
 	MachineCode     string `json:"machine_code"`
 	BucketName      string `json:"bucket_name"`
-	Endpoint        string `json:"endpoint"`
+	Endpoint        string `json:"endpoint"`   // 端点
+	PublicUrl       string `json:"public_url"` // 互联网端点
 	AccessKeyID     string `json:"accessKeyID"`
 	SecretAccessKey string `json:"secretAccessKey"`
 

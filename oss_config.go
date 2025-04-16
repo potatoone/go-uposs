@@ -17,10 +17,11 @@ var (
 
 	// 配置字段的文本框
 	machineCodeEntry     = widget.NewEntry()
-	bucketNameEntry      = widget.NewEntry()         // 添加存储桶名称输入框
-	endpointEntry        = widget.NewPasswordEntry() // 隐藏输入内容
-	accessKeyIDEntry     = widget.NewPasswordEntry()
-	secretAccessKeyEntry = widget.NewPasswordEntry()
+	bucketNameEntry      = widget.NewEntry() // 添加存储桶名称输入框
+	endpointEntry        = widget.NewEntry()
+	publicUrlEntry       = widget.NewEntry()         // 公共URL输入框
+	accessKeyIDEntry     = widget.NewPasswordEntry() // 隐藏输入内容
+	secretAccessKeyEntry = widget.NewPasswordEntry() // 隐藏输入内容
 
 	// UseSSL 复选框
 	useSSLCheck = widget.NewCheck("使用 SSL", nil)
@@ -73,6 +74,7 @@ func saveConfig() {
 	config.MachineCode = machineCodeEntry.Text
 	config.BucketName = bucketNameEntry.Text // 保存存储桶名称
 	config.Endpoint = endpointEntry.Text
+	config.PublicUrl = publicUrlEntry.Text // 保存公共URL
 	config.AccessKeyID = accessKeyIDEntry.Text
 	config.SecretAccessKey = secretAccessKeyEntry.Text
 	config.UseSSL = useSSLCheck.Checked
@@ -98,6 +100,7 @@ func refreshConfig() {
 	machineCodeEntry.SetText(config.MachineCode)
 	bucketNameEntry.SetText(config.BucketName) // 刷新存储桶名称
 	endpointEntry.SetText(config.Endpoint)
+	publicUrlEntry.SetText(config.PublicUrl) // 刷新公共URL
 	accessKeyIDEntry.SetText(config.AccessKeyID)
 	secretAccessKeyEntry.SetText(config.SecretAccessKey)
 	useSSLCheck.SetChecked(config.UseSSL)
@@ -115,6 +118,7 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	machineCodeEntry.SetText(config.MachineCode)
 	bucketNameEntry.SetText(config.BucketName) // 初始化存储桶名称
 	endpointEntry.SetText(config.Endpoint)
+	publicUrlEntry.SetText(config.PublicUrl) // 初始化公共URL
 	accessKeyIDEntry.SetText(config.AccessKeyID)
 	secretAccessKeyEntry.SetText(config.SecretAccessKey)
 	useSSLCheck.SetChecked(config.UseSSL)
@@ -156,6 +160,7 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		labeledEntry("Machine Code:", machineCodeEntry),
 		labeledEntry("Bucket Name:", bucketNameEntry), // 添加存储桶名称字段
 		labeledEntry("Endpoint:", endpointEntry),
+		labeledEntry("Public URL:", publicUrlEntry), // 添加公共URL字段
 		labeledEntry("Access Key ID:", accessKeyIDEntry),
 		labeledEntry("Secret Access Key:", secretAccessKeyEntry),
 	)
