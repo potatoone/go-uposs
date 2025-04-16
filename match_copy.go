@@ -51,7 +51,7 @@ func CopyDir(src string, dst string, bufferSize int, isAutoTask bool, dateRange 
 	}
 
 	// 记录系统日志
-	logMessage := fmt.Sprintf("匹配的文件夹: %s, 目录复制成功: %s -> %s", src, src, dst)
+	logMessage := fmt.Sprintf("匹配到的源文件夹: %s, 目录复制成功: %s -> %s", src, src, dst)
 	if isAutoTask {
 		AutoLogToFile(logMessage)
 	} else {
@@ -157,7 +157,7 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 	}
 
 	// 成功复制的文件信息，记录到日志文件
-	logMsg := fmt.Sprintf("成功复制文件: %s -> %s", src, dst)
+	logMsg := fmt.Sprintf("成功复制文件: %s %s -> %s %s", "源路径", fileName, "目的路径", fileName)
 	if isAutoTask {
 		AutoLogToFile(logMsg)
 	} else {
@@ -208,9 +208,17 @@ func ScanAndCopyFolders(config *Config) error {
 
 // ScanAndCopyFoldersForToday 扫描并复制匹配当前日期的文件夹
 func ScanAndCopyFoldersForToday(config *Config) error {
+	// 获取昨天和今天的日期字符串
+	yesterday := time.Now().AddDate(0, 0, -1).Format("2006.01.02")
 	today := time.Now().Format("2006.01.02")
 
-	// 自动任务没有日期范围，传空字符串
+	// 自动任务日期范围：昨天和今天
+	dateSet := map[string]bool{
+		yesterday: true,
+		today:     true,
+	}
+
+	// 自动任务没有特定的人工选择日期范围
 	dateRange := ""
 
 	return filepath.Walk(config.RemoteFolder, func(path string, info os.FileInfo, err error) error {
@@ -218,7 +226,7 @@ func ScanAndCopyFoldersForToday(config *Config) error {
 			return err
 		}
 
-		if info.IsDir() && info.Name() == today {
+		if info.IsDir() && dateSet[info.Name()] {
 			dstPath := filepath.Join(config.LocalFolder, info.Name())
 			err = CopyDir(path, dstPath, config.IOBuffer, true, dateRange) // true 表示是自动任务
 			if err != nil {
