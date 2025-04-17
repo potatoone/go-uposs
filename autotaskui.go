@@ -10,6 +10,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
@@ -148,12 +149,12 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		}()
 	}
 
-	// 实时时间标签
-	timeLabel := widget.NewLabel("")
-	go func() {
-		for {
-			timeLabel.SetText(time.Now().Format("2006-01-02 15:04:05"))
-			time.Sleep(1 * time.Second)
+	timeBind := binding.NewString()                // 创建一个新的字符串绑定
+	timeLabel := widget.NewLabelWithData(timeBind) // 创建一个新的标签，并绑定到时间数据
+
+	go func() { // 启动一个 goroutine 来更新时间
+		for t := range time.Tick(time.Second) { // 每秒更新一次标签的值
+			_ = timeBind.Set(t.Format("2006-01-02 15:04:05"))
 		}
 	}()
 
