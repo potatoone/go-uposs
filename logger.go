@@ -109,7 +109,8 @@ func InitAutoLogger(logDir string) {
 }
 
 // 通用日志封装函数：记录日志到文件并更新 UI// logToUIAndFile 安全地将日志写入文件并更新 UI
-func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string) error {
+// 通用日志封装函数：记录日志到文件并更新 UI
+func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string, taskLogLines int) error {
 	if logger == nil {
 		return fmt.Errorf("日志记录器未初始化")
 	}
@@ -140,14 +141,21 @@ func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string) err
 
 	// 在主线程上更新 UI
 	fyne.Do(func() {
-		// 将当前日志文本拆分为行
-		lines := strings.Split(logWidget.Text, "\n")
-		// 将新消息添加到日志
-		lines = append(lines, message)
-		// 限制行数为 maxLogLines
-		if len(lines) > maxLogLines {
-			lines = lines[len(lines)-maxLogLines:]
+		// 获取当前日志文本框的内容
+		currentText := logWidget.Text
+
+		// 如果当前文本框内容非空，添加换行符
+		if currentText != "" {
+			currentText += "\n"
 		}
+
+		// 将新日志消息添加到现有内容中
+		lines := strings.Split(currentText+message, "\n")
+		// 限制日志文本框显示行数 taskLogLines
+		if len(lines) > taskLogLines {
+			lines = lines[len(lines)-taskLogLines:]
+		}
+
 		// 更新 UI 组件的文本
 		logWidget.SetText(strings.Join(lines, "\n"))
 	})
@@ -157,12 +165,12 @@ func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string) err
 
 // AutoLogToUIAndFile 向自动任务日志和 UI 日志写入消息
 func AutoLogToFile(message string) error {
-	return logToUIAndFile(autoLogger, autoLogText, message)
+	return logToUIAndFile(autoLogger, autoLogText, message, 20)
 }
 
 // SchedLogToUIAndFile 向计划任务日志和 UI 日志写入消息
 func SchedLogToFile(message string) error {
-	return logToUIAndFile(schedLogger, schedLogText, message)
+	return logToUIAndFile(schedLogger, schedLogText, message, 17)
 }
 
 // ...
