@@ -15,9 +15,6 @@ var (
 	autoLogger  *Logger // 自动任务日志记录器实例
 	maxLogLines = 20    // 最大保留日志行数
 
-	// 系统日志文件路径
-	SysLogPath = filepath.Join(utils.GoupossPath, "sys.log")
-
 	// 日志写入互斥锁
 	logMutex sync.Mutex
 )
@@ -45,13 +42,13 @@ func NewLogger(logDir string) *Logger {
 // InitSysLogger 初始化系统日志
 func InitSysLogger() error {
 	// 确保日志目录存在
-	logDir := filepath.Dir(SysLogPath)
+	logDir := filepath.Dir(utils.SysLogPath)
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		return fmt.Errorf("创建日志目录失败: %v", err)
 	}
 
 	// 确保日志文件可写入
-	file, err := os.OpenFile(SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(utils.SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("无法打开系统日志文件: %v", err)
 	}
@@ -66,13 +63,13 @@ func SysLogToFile(message string) error {
 	defer logMutex.Unlock()
 
 	// 确保日志目录存在
-	logDir := filepath.Dir(SysLogPath)
+	logDir := filepath.Dir(utils.SysLogPath)
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		return fmt.Errorf("创建日志目录失败: %v", err)
 	}
 
 	// 打开或创建日志文件
-	file, err := os.OpenFile(SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(utils.SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("无法打开系统日志文件: %v", err)
 	}

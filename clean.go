@@ -192,13 +192,13 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 
 func init() {
 	// 确保日志目录存在
-	logDir := filepath.Join(utils.GoupossPath)
+	logDir := filepath.Dir(utils.SysLogPath) // 使用 SysLogPath 来获取目录
 	if err := os.MkdirAll(logDir, os.ModePerm); err != nil {
 		log.Fatalf("创建日志目录失败: %v", err)
 	}
 
 	// 打开日志文件
-	logFile, err := os.OpenFile(filepath.Join(logDir, "sys.log"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile(utils.SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("打开日志文件失败: %v", err)
 	}

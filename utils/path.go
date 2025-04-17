@@ -1,10 +1,11 @@
 package utils
 
 import (
-	"log"
+	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -23,7 +24,29 @@ var (
 
 	// SchedLogPath 存储 gouposs 应用程序计划复制日志文件夹路径
 	SchedLogPath string
+
+	// SysLogPath 是系统日志文件路径
+	SysLogPath string
 )
+
+// WriteSysLog 写入系统日志文件
+func WriteSysLog(msg string) {
+	if SysLogPath == "" {
+		return
+	}
+	// 添加时间戳
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
+	logLine := fmt.Sprintf("%s %s\n", timestamp, msg)
+
+	// 以追加方式写入日志
+	f, err := os.OpenFile(SysLogPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	f.WriteString(logLine)
+}
 
 // 初始化模块变量
 func init() {
@@ -32,17 +55,19 @@ func init() {
 	DataPath = filepath.Join(GoupossPath, "data")          // 构建 data 文件夹路径
 	AutoLogPath = filepath.Join(GoupossPath, "log_auto")   // 构建 auto log 文件夹路径
 	SchedLogPath = filepath.Join(GoupossPath, "log_sched") // 构建 sched log 文件夹路径
+	SysLogPath = filepath.Join(GoupossPath, "sys.log")     // 构建系统日志路径
 
 	// 确保所有目录存在
 	EnsureDirExists(DataPath)
 	EnsureDirExists(AutoLogPath)
 	EnsureDirExists(SchedLogPath)
 
-	log.Printf("DocumentsPath: %s\n", DocumentsPath)
-	log.Printf("GoupossPath: %s\n", GoupossPath)
-	log.Printf("DataPath: %s\n", DataPath)
-	log.Printf("AutoLogPath: %s\n", AutoLogPath)
-	log.Printf("SchedLogPath: %s\n", SchedLogPath)
+	WriteSysLog(fmt.Sprintf("DocumentsPath: %s", DocumentsPath))
+	WriteSysLog(fmt.Sprintf("GoupossPath: %s", GoupossPath))
+	WriteSysLog(fmt.Sprintf("DataPath: %s", DataPath))
+	WriteSysLog(fmt.Sprintf("AutoLogPath: %s", AutoLogPath))
+	WriteSysLog(fmt.Sprintf("SchedLogPath: %s", SchedLogPath))
+
 }
 
 // GetWindowsDocumentsPath 获取当前 Windows 用户的 Documents 文件夹路径
