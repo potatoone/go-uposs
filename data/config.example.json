@@ -1,5 +1,5 @@
 {
-  "machine_code": "FGCK-01",
+  "machine_code": "machine-01",
   "bucket_name": "test",
   "endpoint": "play.min.io",
   "accessKeyID": "Q3AM3UQ867SPQQA43P2F",
@@ -15,8 +15,8 @@
   "io_buffer": 409600,
   "auto_interval": "60",
   "sched_interval": "20",
-  "api1": "It is necessary to refactor the code to fit your own query API",
-  "api2": "http://localhost:3001",
+  "api1": "查询APAI",
+  "api2": "推送API",
   "cleaStartTime": "2025.01.01",
   "cleanEndTime": "2025.03.17",
   "autostart": "false",
