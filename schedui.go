@@ -40,7 +40,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	dateUI := CreateDateUI(myWindow, config)
 
 	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(16)
+	schedLogText.SetMinRowsVisible(17)
 
 	// 初始化进度条并
 	progressBar = widget.NewProgressBarInfinite()
@@ -119,7 +119,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 									} else {
 										// 其他错误，先记录错误，再尝试重试一次
 										SchedLogToFile(fmt.Sprintf("上传图片失败: %v，\n20 秒后重试一次...", err))
-										time.Sleep(1 * time.Second)
+										time.Sleep(20 * time.Second)
 
 										// 再次尝试上传
 										err = UploadImagesWithTaskType(newConfig, true)
@@ -127,7 +127,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 											SchedLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
 											// 发送企业微信通知
 											if notifyErr := newConfig.NotifyUploadFailed(); notifyErr != nil {
-												SchedLogToFile(fmt.Sprintf("发送失败通知失败: %v", notifyErr))
+												SchedLogToFile(fmt.Sprintf("发送企业微信通知: %v", notifyErr))
 											}
 										} else {
 											SchedLogToFile("重试成功，所有图片上传完成")

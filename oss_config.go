@@ -111,7 +111,7 @@ func refreshConfig() {
 // CreateUI 创建 UI 界面
 func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 设置日志文本框
-	logText.SetMinRowsVisible(12)
+	logText.SetMinRowsVisible(11)
 	logText.SetText("") // 清空初始内容
 
 	// 初始化文本框内容

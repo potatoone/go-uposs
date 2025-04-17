@@ -47,7 +47,7 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 
 	// 清空日志框
 	folderLogText.SetText("")
-	folderLogText.SetMinRowsVisible(17) // 设置日志显示的行数，保持与其他页面一致
+	folderLogText.SetMinRowsVisible(18) // 设置日志显示的行数，保持与其他页面一致
 
 	// 添加日志到UI和系统日志的函数
 	logToUIAndSystem := func(message string) {

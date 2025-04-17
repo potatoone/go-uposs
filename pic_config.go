@@ -68,7 +68,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建一个日志输出框（多行文本框）
 	logOutput := widget.NewMultiLineEntry()
-	logOutput.SetMinRowsVisible(17) // 设置日志文本框可见行数
+	logOutput.SetMinRowsVisible(18) // 设置日志文本框可见行数
 	logOutput.SetText("")           // 确保初始文本为空，没有空行
 
 	// 添加日志到UI和系统日志

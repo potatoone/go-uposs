@@ -76,7 +76,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
-	apiLogText.SetMinRowsVisible(19)
+	apiLogText.SetMinRowsVisible(18)
 
 	// 添加日志到 UI 和系统日志的函数
 	logToUIAndSystem := func(message string) {

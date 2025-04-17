@@ -111,9 +111,14 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 							err = UploadImagesWithTaskType(newConfig, false)
 							if err != nil {
 								AutoLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
+								// 发送企业微信通知
+								if notifyErr := newConfig.NotifyUploadFailed(); notifyErr != nil {
+									AutoLogToFile(fmt.Sprintf("发送企业微信通知: %v", notifyErr))
+								}
 							} else {
 								AutoLogToFile("重试成功，所有图片上传完成")
 							}
+
 						}
 					} else {
 						AutoLogToFile("所有图片上传完成")
@@ -156,7 +161,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	systemTimeLabel := widget.NewLabel("系统时间:")
 
 	// 设置日志文本框
-	autoLogText.SetMinRowsVisible(19)
+	autoLogText.SetMinRowsVisible(20)
 
 	// 初始化进度条
 	autoProgressBar = widget.NewProgressBarInfinite()
