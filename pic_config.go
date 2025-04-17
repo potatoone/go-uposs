@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"go-uposs/utils"
 	"strconv"
-	"time" // 添加时间包
 
+	// 添加时间包
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
@@ -67,24 +67,9 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	sizeInput.SetText(strconv.Itoa(config.PicSize)) // 设置默认值为配置文件中的体积
 
 	// 创建一个日志输出框（多行文本框）
-	logOutput := widget.NewMultiLineEntry()
-	logOutput.SetMinRowsVisible(18) // 设置日志文本框可见行数
-	logOutput.SetText("")           // 确保初始文本为空，没有空行
-
-	// 添加日志到UI和系统日志
-	logToUIAndSystem := func(message string) {
-		// 获取当前时间
-		currentTime := time.Now().Format("2006-01-02 15:04:05")
-
-		// 格式化消息，包含时间戳
-		formattedMessage := fmt.Sprintf("%s %s", currentTime, message)
-
-		// 添加到UI
-		logOutput.SetText(formattedMessage + "\n" + logOutput.Text)
-
-		// 添加到系统日志
-		SysLogToFile(fmt.Sprintf("[图片配置] %s", message))
-	}
+	picLogText := widget.NewMultiLineEntry()
+	picLogText.SetMinRowsVisible(18) // 设置日志文本框可见行数
+	picLogText.SetText("")           // 确保初始文本为空，没有空行
 
 	confirmButton := widget.NewButton("修改参数", func() {
 		// 获取用户输入的宽度
@@ -92,7 +77,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		width, err := strconv.Atoi(widthStr)
 		if err != nil || width < 1 || width > 10000 {
 			// 如果输入无效，打印错误
-			logToUIAndSystem("请输入有效的宽度（1-10000）！")
+			updateLog(picLogText, "[图片配置]", "请输入有效的宽度（1-10000）！")
 			return
 		}
 
@@ -101,7 +86,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		compress, err := strconv.Atoi(compressStr)
 		if err != nil || compress < 1 || compress > 100 {
 			// 如果压缩比率无效，打印错误
-			logToUIAndSystem("请输入有效的压缩比率（1-100）！")
+			updateLog(picLogText, "[图片配置]", "请输入有效的压缩比率（1-100）！")
 			return
 		}
 
@@ -110,7 +95,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		size, err := strconv.Atoi(sizeStr)
 		if err != nil || size < 1 {
 			// 如果体积无效，打印错误
-			logToUIAndSystem("请输入有效的体积（KB）！")
+			updateLog(picLogText, "[图片配置]", "请输入有效的体积（KB）！")
 			return
 		}
 
@@ -128,7 +113,7 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			// 直接使用传入的 config 实例，不重新加载
 			if err := SaveConfig("config.json", config); err != nil {
 				errMsg := fmt.Sprintf("保存配置失败: %s", err.Error())
-				logToUIAndSystem(errMsg)
+				updateLog(picLogText, "[图片配置]", errMsg)
 				return
 			}
 
@@ -138,7 +123,8 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			// 输出操作成功日志
 			successMsg := fmt.Sprintf("压缩比率设置为: %d%%，宽度设置为: %d，过滤图片的大小设置为: %dKB",
 				compress, width, size)
-			logToUIAndSystem(successMsg)
+			updateLog(picLogText, "[图片配置]", successMsg)
+
 		}, myWindow) // myWindow 是当前窗口的引用
 	})
 
@@ -156,9 +142,9 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 将控件放到垂直布局中，并将百分比条和按钮放在右边，文本框放在下面
 	return container.NewBorder(
-		nil,       // top
-		logOutput, // bottom
-		nil,       // left
+		nil,        // top
+		picLogText, // bottom
+		nil,        // left
 		container.NewVBox(progress, buttonContainer), // right
 		container.NewVBox(
 			compressBox, // 压缩比率的标签和输入框

@@ -6,7 +6,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -49,21 +48,6 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 	folderLogText.SetText("")
 	folderLogText.SetMinRowsVisible(18) // 设置日志显示的行数，保持与其他页面一致
 
-	// 添加日志到UI和系统日志的函数
-	logToUIAndSystem := func(message string) {
-		// 获取当前时间
-		currentTime := time.Now().Format("2006-01-02 15:04:05")
-
-		// 格式化消息，包含时间戳
-		formattedMessage := fmt.Sprintf("%s %s", currentTime, message)
-
-		// 添加到UI，新日志在顶部
-		folderLogText.SetText(formattedMessage + "\n" + folderLogText.Text)
-
-		// 添加到系统日志
-		SysLogToFile(fmt.Sprintf("[文件夹配置] %s", message))
-	}
-
 	// 创建保存配置按钮
 	saveButton := widget.NewButton("保存配置", func() {
 		dialog.ShowConfirm("确认保存", "你确定要保存配置吗？", func(confirm bool) {
@@ -71,27 +55,30 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 				// 更新配置
 				config.RemoteFolder = remoteFolderEntry.Text
 				config.LocalFolder = localFolderEntry.Text
+
+				// 获取用户输入的缓冲区大小
 				ioBuffer, err := strconv.Atoi(ioBufferEntry.Text)
 				if err != nil {
-					logToUIAndSystem(fmt.Sprintf("无效的缓冲区大小: %s", err.Error()))
+					updateLog(folderLogText, "[文件夹配置]", fmt.Sprintf("无效的缓冲区大小: %s", err.Error()))
 					return
 				}
 				config.IOBuffer = ioBuffer * 1024 // 将KB转换为字节
 
 				// 检查路径是否为空
 				if config.RemoteFolder == "" || config.LocalFolder == "" {
-					logToUIAndSystem("路径不能为空，请检查输入。")
+					updateLog(folderLogText, "[文件夹配置]", "路径不能为空，请检查输入。")
 					return
 				}
 
 				// 保存配置 - 直接使用文件名，不构建路径
 				if err := SaveConfig("config.json", config); err != nil {
 					// 保存失败，显示错误信息
-					logToUIAndSystem(fmt.Sprintf("保存配置失败: %s", err.Error()))
+					updateLog(folderLogText, "[文件夹配置]", fmt.Sprintf("保存配置失败: %s", err.Error()))
 				} else {
 					// 配置保存成功，更新日志
-					logToUIAndSystem("配置保存成功！")
+					updateLog(folderLogText, "[文件夹配置]", "配置保存成功！")
 				}
+
 			}
 		}, myWindow)
 	})
@@ -101,21 +88,21 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 		// 获取当前输入框中的值
 		remotePath := remoteFolderEntry.Text
 		if remotePath == "" {
-			logToUIAndSystem("请输入远端文件夹路径")
+			updateLog(folderLogText, "[扫描文件夹]", "请输入远端文件夹路径")
 			return
 		}
 
-		logToUIAndSystem(fmt.Sprintf("开始扫描文件夹: %s", remotePath))
+		updateLog(folderLogText, "[扫描文件夹]", fmt.Sprintf("开始扫描文件夹: %s", remotePath))
 
 		// 扫描 remote 目录下的所有文件夹名称
 		folders, err := scanRemoteFolders(remotePath)
 		if err != nil {
-			logToUIAndSystem(fmt.Sprintf("扫描远端文件夹失败: %s", err.Error()))
+			updateLog(folderLogText, "[扫描文件夹]", fmt.Sprintf("扫描远端文件夹失败: %s", err.Error()))
 			return
 		}
 
 		// 将文件夹名称追加到日志文本框中，名称逗号分隔不换行显示
-		logToUIAndSystem(fmt.Sprintf("扫描完成，找到 %d 个文件夹: %s",
+		updateLog(folderLogText, "[扫描文件夹]", fmt.Sprintf("扫描完成，找到 %d 个文件夹: %s",
 			len(folders), strings.Join(folders, ", ")))
 	})
 

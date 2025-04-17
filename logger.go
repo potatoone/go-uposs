@@ -8,6 +8,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/widget"
 )
 
 var (
@@ -81,7 +84,7 @@ func SysLogToFile(message string) error {
 	}
 
 	// 格式化日志内容，包含时间戳
-	logMessage := fmt.Sprintf("[%s] %s", time.Now().Format("2006-01-02 15:04:05"), message)
+	logMessage := fmt.Sprintf("%s %s", time.Now().Format("2006-01-02 15:04:05"), message)
 
 	// 写入日志
 	if _, err := file.WriteString(logMessage); err != nil {
@@ -91,6 +94,9 @@ func SysLogToFile(message string) error {
 	return nil
 }
 
+// ...
+// ...
+// ...
 // 任务日志记录器部分
 // InitSchedLogger 初始化计划任务日志记录器
 func InitSchedLogger(logDir string) {
@@ -102,88 +108,20 @@ func InitAutoLogger(logDir string) {
 	autoLogger = NewLogger(logDir)
 }
 
-// AutoLogToFile 向自动任务日志文件写入日志
-func AutoLogToFile(message string) error {
-	if autoLogger == nil {
-		return fmt.Errorf("自动任务日志记录器未初始化")
-	}
-	err := autoLogger.LogToFile(message)
-	if err != nil {
-		return err
+// 通用日志封装函数：记录日志到文件并更新 UI// logToUIAndFile 安全地将日志写入文件并更新 UI
+func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string) error {
+	if logger == nil {
+		return fmt.Errorf("日志记录器未初始化")
 	}
 
-	// 更新UI日志，仅保留最新的maxLogLines行
-	currentLines := strings.Split(autoLogText.Text, "\n")
-	if len(currentLines) > maxLogLines {
-		// 只保留最新的maxLogLines行
-		newLines := currentLines[len(currentLines)-maxLogLines:]
-		autoLogText.SetText(strings.Join(newLines, "\n"))
-	}
-
-	// 添加新日志到末尾
-	if autoLogText.Text != "" {
-		autoLogText.SetText(autoLogText.Text + "\n" + message)
-	} else {
-		autoLogText.SetText(message)
-	}
-
-	return nil
-}
-
-// SchedLogToFile 向计划任务日志文件写入日志
-func SchedLogToFile(message string) error {
-	if schedLogger == nil {
-		return fmt.Errorf("计划任务日志记录器未初始化")
-	}
-	err := schedLogger.LogToFile(message)
-	if err != nil {
-		return err
-	}
-
-	// 更新UI日志，仅保留最新的maxLogLines行
-	currentLines := strings.Split(schedLogText.Text, "\n")
-	if len(currentLines) > maxLogLines {
-		// 只保留最新的maxLogLines行
-		newLines := currentLines[len(currentLines)-maxLogLines:]
-		schedLogText.SetText(strings.Join(newLines, "\n"))
-	}
-
-	// 添加新日志到末尾
-	if schedLogText.Text != "" {
-		schedLogText.SetText(schedLogText.Text + "\n" + message)
-	} else {
-		schedLogText.SetText(message)
-	}
-
-	return nil
-}
-
-// LogToFile 记录日志到文件的全局函数 (已废弃，保留用于兼容)
-func LogToFile(message string) error {
-	// 优先使用自动任务日志记录器
-	if autoLogger != nil {
-		return autoLogger.LogToFile(message)
-	}
-	// 否则尝试使用计划任务日志记录器
-	if schedLogger != nil {
-		return schedLogger.LogToFile(message)
-	}
-	return fmt.Errorf("日志记录器未初始化")
-}
-
-// getLogFilePath 获取当前日志文件路径
-func (l *Logger) getLogFilePath() string {
-	return fmt.Sprintf("%s/%s.log", l.LogDir, l.Date)
-}
-
-// LogToFile 追加日志到文件
-func (l *Logger) LogToFile(message string) error {
+	// 获取当前日期，并检查是否需要更换日志文件
 	currentDate := time.Now().Format("2006.01.02")
-	if currentDate != l.Date {
-		l.Date = currentDate
+	if currentDate != logger.Date {
+		logger.Date = currentDate
 	}
 
-	logFilePath := l.getLogFilePath()
+	// 获取当前日志文件路径
+	logFilePath := fmt.Sprintf("%s/%s.log", logger.LogDir, logger.Date)
 
 	// 打开或创建日志文件
 	file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -193,12 +131,76 @@ func (l *Logger) LogToFile(message string) error {
 	defer file.Close()
 
 	// 格式化日志内容，包含时间戳
-	logMessage := fmt.Sprintf("[%s] %s", time.Now().Format("2006-01-02 15:04:05"), message)
+	logMessage := fmt.Sprintf("%s %s", time.Now().Format("2006-01-02 15:04:05"), message)
 
 	// 写入日志并换行
-	if _, err := file.WriteString(logMessage + "\n"); err != nil { // 确保换行
+	if _, err := file.WriteString(logMessage + "\n"); err != nil {
 		return fmt.Errorf("写入日志失败: %v", err)
 	}
 
+	// 在主线程上更新 UI
+	fyne.Do(func() {
+		// 将当前日志文本拆分为行
+		lines := strings.Split(logWidget.Text, "\n")
+		// 将新消息添加到日志
+		lines = append(lines, message)
+		// 限制行数为 maxLogLines
+		if len(lines) > maxLogLines {
+			lines = lines[len(lines)-maxLogLines:]
+		}
+		// 更新 UI 组件的文本
+		logWidget.SetText(strings.Join(lines, "\n"))
+	})
+
 	return nil
+}
+
+// AutoLogToUIAndFile 向自动任务日志和 UI 日志写入消息
+func AutoLogToFile(message string) error {
+	return logToUIAndFile(autoLogger, autoLogText, message)
+}
+
+// SchedLogToUIAndFile 向计划任务日志和 UI 日志写入消息
+func SchedLogToFile(message string) error {
+	return logToUIAndFile(schedLogger, schedLogText, message)
+}
+
+// ...
+// ...
+// ...
+// 封装日志更新函数
+// updateLog 带标签地更新日志到指定的 Entry 控件，并确保线程安全
+// 参数：
+//
+//	logWidget - 日志输出目标的 Entry 控件
+//	tag       - 日志来源标签，例如 "[OSS配置]"
+//	message   - 实际日志内容（不需要时间戳，函数内部自动添加）
+func updateLog(logWidget *widget.Entry, tag, message string) {
+	fyne.Do(func() {
+		// 构建带时间戳和标签的日志消息
+		timestamp := time.Now().Format("2006-01-02 15:04:05")
+		fullMessage := fmt.Sprintf("%s %s %s", timestamp, tag, message)
+
+		// 取当前 Entry 的内容
+		currentText := logWidget.Text
+
+		// 将新消息插入到最前面（新日志在上）
+		if currentText != "" {
+			currentText = fullMessage + "\n" + currentText
+		} else {
+			currentText = fullMessage
+		}
+
+		// 限制最大行数（保留最新的 maxLogLines 行）
+		lines := strings.Split(currentText, "\n")
+		if len(lines) > maxLogLines {
+			lines = lines[:maxLogLines]
+		}
+
+		// 设置更新后的日志内容
+		logWidget.SetText(strings.Join(lines, "\n"))
+
+		// 同步写入系统日志文件
+		SysLogToFile(fmt.Sprintf("%s %s", tag, message))
+	})
 }

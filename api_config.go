@@ -78,21 +78,6 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	apiLogText := widget.NewMultiLineEntry()
 	apiLogText.SetMinRowsVisible(18)
 
-	// 添加日志到 UI 和系统日志的函数
-	logToUIAndSystem := func(message string) {
-		// 获取当前时间
-		currentTime := time.Now().Format("2006-01-02 15:04:05")
-
-		// 格式化消息，包含时间戳
-		formattedMessage := fmt.Sprintf("%s %s", currentTime, message)
-
-		// 添加到 UI
-		apiLogText.SetText(formattedMessage + "\n" + apiLogText.Text)
-
-		// 添加到系统日志
-		SysLogToFile(fmt.Sprintf("[API配置] %s", message))
-	}
-
 	// 创建保存按钮
 	saveButton := widget.NewButton("保存配置", func() {
 		dialog.ShowConfirm("确认保存", "确定要保存配置吗？", func(confirm bool) {
@@ -101,14 +86,15 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 				config.API2 = api2Entry.Text
 				config.WebhookURL = webhookEntry.Text
 
-				// 直接使用文件名，不构建路径
+				// 假设你有一个 apiLogText 变量表示 API 配置那一栏的日志框
 				if err := SaveConfig("config.json", config); err != nil {
 					errorMsg := fmt.Sprintf("保存配置失败: %v", err)
-					logToUIAndSystem(errorMsg)
+					updateLog(apiLogText, "[API配置]", errorMsg)
 					dialog.ShowInformation("保存失败", errorMsg, myWindow)
 				} else {
-					logToUIAndSystem("配置已成功保存")
+					updateLog(apiLogText, "[API配置]", "配置已成功保存")
 				}
+
 			}
 		}, myWindow)
 	})
@@ -120,12 +106,12 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		api2URL := api2Entry.Text
 
 		if api1URL == "" && api2URL == "" {
-			logToUIAndSystem("请至少输入一个 API 地址")
+			updateLog(apiLogText, "[API配置]", "请至少输入一个 API 地址")
 			return
 		}
 
 		// 开始测试
-		logToUIAndSystem("开始测试 API...")
+		updateLog(apiLogText, "[API配置]", "开始测试 API...")
 
 		// 在后台线程中测试，避免阻塞 UI
 		go func() {
@@ -133,10 +119,10 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			if api1URL != "" {
 				statusCode, duration, err := TestAPIHTTP(api1URL)
 				if err != nil {
-					logToUIAndSystem(fmt.Sprintf("API1: %v", err))
+					updateLog(apiLogText, "[API配置]", fmt.Sprintf("API1: %v", err))
 				} else {
 					result := FormatAPITestResult(statusCode, duration)
-					logToUIAndSystem(fmt.Sprintf("API1: %s", result))
+					updateLog(apiLogText, "[API配置]", fmt.Sprintf("API1: %s", result))
 				}
 			}
 
@@ -144,14 +130,14 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			if api2URL != "" {
 				statusCode, duration, err := TestAPIHTTP(api2URL)
 				if err != nil {
-					logToUIAndSystem(fmt.Sprintf("API2: %v", err))
+					updateLog(apiLogText, "[API配置]", fmt.Sprintf("API2: %v", err))
 				} else {
 					result := FormatAPITestResult(statusCode, duration)
-					logToUIAndSystem(fmt.Sprintf("API2: %s", result))
+					updateLog(apiLogText, "[API配置]", fmt.Sprintf("API2: %s", result))
 				}
 			}
 
-			logToUIAndSystem("API 测试完成")
+			updateLog(apiLogText, "[API配置]", "API 测试完成")
 		}()
 	})
 

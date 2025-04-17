@@ -9,24 +9,6 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// MinioLogToFile 记录 MinIO 相关日志
-func MinioLogToFile(message string) {
-	// 不在这里添加时间戳，只添加标识符
-	formattedMessage := fmt.Sprintf("[MinIO] %s", message)
-
-	// 写入系统日志，SysLogToFile 会添加时间戳
-	SysLogToFile(formattedMessage)
-
-	// 获取当前时间用于 UI 显示
-	currentTime := time.Now().Format("2006-01-02 15:04:05")
-
-	// 为 UI 日志添加时间戳
-	uiMessage := fmt.Sprintf("[%s] %s", currentTime, formattedMessage)
-
-	logText.SetText(uiMessage + "\n" + logText.Text)
-
-}
-
 // InitMinioClient 初始化 MinIO 客户端
 func InitMinioClient(config *Config, useSSL bool) (*minio.Client, error) {
 	client, err := minio.New(config.Endpoint, &minio.Options{
@@ -39,7 +21,7 @@ func InitMinioClient(config *Config, useSSL bool) (*minio.Client, error) {
 
 	logMessage := fmt.Sprintf("客户端初始化成功 | MachineCode: %s | Endpoint: %s | UseSSL: %v",
 		config.MachineCode, config.Endpoint, useSSL)
-	MinioLogToFile(logMessage)
+	updateLog(ossLogText, "[MinioClient]", logMessage)
 
 	return client, nil
 }
@@ -62,38 +44,41 @@ func TestMinioConnection(useSSL bool) (string, error) {
 	config, err := LoadConfig("config.json")
 
 	if err != nil {
-		MinioLogToFile(fmt.Sprintf("加载配置失败: %v", err))
+		// 记录加载配置失败
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("加载配置失败: %v", err)) // 更新日志
 		return "", fmt.Errorf("加载配置失败: %v", err)
 	}
 
-	MinioLogToFile(fmt.Sprintf("测试与 %s 的连接 (UseSSL: %t)", config.Endpoint, useSSL))
+	// 记录连接测试开始
+	updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("测试与 %s 的连接 (UseSSL: %t)", config.Endpoint, useSSL)) // 更新日志
 
 	// 初始化 MinIO 客户端
 	client, err := InitMinioClient(config, useSSL)
 	if err != nil {
-		MinioLogToFile(fmt.Sprintf("初始化MinIO客户端失败: %v", err))
+		// 记录初始化失败
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("初始化MinIO客户端失败: %v", err)) // 更新日志
 		return "", err
 	}
 
 	// 测试连接
 	if err := TestConnection(client); err != nil {
-		MinioLogToFile(fmt.Sprintf("连接测试失败: %v", err))
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("连接测试失败: %v", err)) // 更新日志
 		return "", err
 	}
 
 	// 获取存储桶列表
 	buckets, err := client.ListBuckets(context.Background())
 	if err != nil {
-		MinioLogToFile(fmt.Sprintf("获取存储桶列表失败: %v", err))
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("获取存储桶列表失败: %v", err)) // 更新日志
 		return "", fmt.Errorf("获取存储桶列表失败: %v", err)
 	}
 
-	// 将存储桶列表写入日志
-	MinioLogToFile(fmt.Sprintf("连接成功! 找到 %d 个存储桶", len(buckets)))
+	// 记录连接成功并找到的存储桶数量
+	updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("连接成功! 找到 %d 个存储桶", len(buckets))) // 更新日志
 
-	// 记录每个存储桶的详细信息到日志
+	// 记录每个存储桶的详细信息
 	for _, bucket := range buckets {
-		MinioLogToFile(fmt.Sprintf("存储桶: %s (创建于: %s)", bucket.Name, bucket.CreationDate.Format("2006-01-02 15:04:05")))
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("存储桶: %s (创建于: %s)", bucket.Name, bucket.CreationDate.Format("2006-01-02 15:04:05"))) // 更新日志
 	}
 
 	return "连接测试成功", nil
@@ -106,10 +91,10 @@ func ListBuckets(client *minio.Client) ([]minio.BucketInfo, error) {
 
 	buckets, err := client.ListBuckets(ctx)
 	if err != nil {
-		MinioLogToFile(fmt.Sprintf("获取存储桶列表失败: %v", err))
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("获取存储桶列表失败: %v", err)) // 更新日志
 		return nil, fmt.Errorf("获取存储桶列表失败: %v", err)
 	}
 
-	MinioLogToFile(fmt.Sprintf("成功获取 %d 个存储桶信息", len(buckets)))
+	updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("成功获取 %d 个存储桶信息", len(buckets))) // 更新日志
 	return buckets, nil
 }

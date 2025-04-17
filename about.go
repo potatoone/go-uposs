@@ -22,8 +22,8 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 		return nil
 	}
 
-	logOutput := widget.NewMultiLineEntry()
-	logOutput.SetMinRowsVisible(5)
+	aboutLogText := widget.NewMultiLineEntry()
+	aboutLogText.SetMinRowsVisible(6)
 
 	// 直接将日期选择UI放在界面上，使用专门的清理日期UI
 	dateUI := CreateCleanDateUI(win, config)
@@ -77,27 +77,11 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 				return
 			}
 
-			// 创建进度条
-			progressBar := widget.NewProgressBarInfinite()
-
-			// 使用NewCustomWithoutButtons创建对话框
-			progressDialog := dialog.NewCustomWithoutButtons(
-				"正在清理",
-				container.NewVBox(
-					widget.NewLabel("正在清理旧数据..."),
-					progressBar,
-				),
-				win,
-			)
-			progressDialog.Show()
-
 			go func() {
 				cleanCfg := CleanConfig{
 					StartTime: startTimeText,
 					EndTime:   endTimeText,
 				}
-
-				logOutput.SetText("开始清理...\n")
 
 				// 根据复选框决定是否清除日志文件
 				var filesCount int
@@ -106,21 +90,17 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 
 				if clearLogCheck.Checked {
 					filesCount, filesSize, _ = cleanLogFilesByDateRange(cleanCfg, false)
-					logMsg = fmt.Sprintf("已清理从 %s 到 %s 的%d个日志文件 (%.2f MB)\n",
+					logMsg = fmt.Sprintf("已清理从 %s 到 %s 的 %d 个日志文件 (%.2f MB)",
 						startTimeText, endTimeText, filesCount, float64(filesSize)/(1024*1024))
-					logOutput.SetText(logOutput.Text + logMsg)
+					updateLog(aboutLogText, "[关于]", logMsg)
 				}
 
 				// 清理数据库记录
 				recordCount, _ := cleanDatabaseRecordsByDateRange(cleanCfg, false)
-				logMsg = fmt.Sprintf("已清理从 %s 到 %s 的%d条数据库记录\n",
+				logMsg = fmt.Sprintf("已清理从 %s 到 %s 的 %d 条数据库记录",
 					startTimeText, endTimeText, recordCount)
-				logOutput.SetText(logOutput.Text + logMsg)
+				updateLog(aboutLogText, "[关于]", logMsg)
 
-				// 添加完成提示
-				logOutput.SetText(logOutput.Text + "清理完成!")
-
-				progressDialog.Hide()
 			}()
 		}, win)
 	})
@@ -146,7 +126,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 		widget.NewLabelWithStyle("清理数据", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		topContainer,
 		container.NewVBox(
-			logOutput,
+			aboutLogText,
 		),
 	)
 

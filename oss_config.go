@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"go-uposs/utils"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -17,7 +16,7 @@ const (
 	entryWidth = 460 // 文本框固定宽度
 )
 
-var logText *widget.Entry
+var ossLogText *widget.Entry
 
 // 创建一个标签和输入框并排的组件
 func labeledEntry(labelText string, entry *widget.Entry) fyne.CanvasObject {
@@ -27,23 +26,14 @@ func labeledEntry(labelText string, entry *widget.Entry) fyne.CanvasObject {
 	return container.NewHBox(labelContainer, entryContainer)
 }
 
-// logToUIAndSystem 添加日志到UI和系统日志
-func logToUIAndSystem(message string) {
-	currentTime := time.Now().Format("2006-01-02 15:04:05")
-	formattedMessage := fmt.Sprintf("%s %s", currentTime, message)
-	logMutex.Lock()
-	logText.SetText(formattedMessage + "\n" + logText.Text)
-	logMutex.Unlock()
-	SysLogToFile(fmt.Sprintf("[OSS配置] %s", message))
-}
-
-// saveConfig 保存配置
+// saveConfig 保存 OSS 配置
 func saveConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEntry, accessKeyIDEntry, secretAccessKeyEntry *widget.Entry, useSSLCheck *widget.Check) {
 	config, err := LoadConfig("config.json")
 	if err != nil {
-		logToUIAndSystem(fmt.Sprintf("加载配置失败: %s", err.Error()))
+		updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("加载配置失败: %s", err.Error()))
 		return
 	}
+
 	config.MachineCode = machineCodeEntry.Text
 	config.BucketName = bucketNameEntry.Text
 	config.Endpoint = endpointEntry.Text
@@ -51,20 +41,22 @@ func saveConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEntry
 	config.AccessKeyID = accessKeyIDEntry.Text
 	config.SecretAccessKey = secretAccessKeyEntry.Text
 	config.UseSSL = useSSLCheck.Checked
+
 	if err := SaveConfig("config.json", config); err != nil {
-		logToUIAndSystem(fmt.Sprintf("保存配置失败: %s", err.Error()))
+		updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("保存配置失败: %s", err.Error()))
 	} else {
-		logToUIAndSystem("配置保存成功！")
+		updateLog(ossLogText, "[OSS配置]", "配置保存成功！")
 	}
 }
 
-// refreshConfig 刷新配置
+// refreshConfig 刷新 OSS 配置
 func refreshConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEntry, accessKeyIDEntry, secretAccessKeyEntry *widget.Entry, useSSLCheck *widget.Check) {
 	config, err := LoadConfig("config.json")
 	if err != nil {
-		logToUIAndSystem(fmt.Sprintf("加载配置失败: %s", err.Error()))
+		updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("加载配置失败: %s", err.Error()))
 		return
 	}
+
 	machineCodeEntry.SetText(config.MachineCode)
 	bucketNameEntry.SetText(config.BucketName)
 	endpointEntry.SetText(config.Endpoint)
@@ -72,14 +64,15 @@ func refreshConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEn
 	accessKeyIDEntry.SetText(config.AccessKeyID)
 	secretAccessKeyEntry.SetText(config.SecretAccessKey)
 	useSSLCheck.SetChecked(config.UseSSL)
-	logToUIAndSystem("配置已刷新！")
+
+	updateLog(ossLogText, "[OSS配置]", "配置已刷新！")
 }
 
 // CreateUI 创建 UI 界面
 func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
-	logText = widget.NewMultiLineEntry()
-	logText.SetMinRowsVisible(11)
-	logText.SetText("")
+	ossLogText = widget.NewMultiLineEntry()
+	ossLogText.SetMinRowsVisible(11)
+	ossLogText.SetText("")
 
 	machineCodeEntry := widget.NewEntry()
 	bucketNameEntry := widget.NewEntry()
@@ -104,16 +97,19 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			}
 		}, myWindow)
 	})
+
+	// 创建测试连接按钮
 	testButton := widget.NewButton("测试连接", func() {
-		logToUIAndSystem("测试连接中...")
+		updateLog(ossLogText, "[OSS配置]", "测试连接中...") // 使用统一的日志更新函数
 		useSSL := useSSLCheck.Checked
 		result, err := TestMinioConnection(useSSL)
 		if err != nil {
-			logToUIAndSystem(fmt.Sprintf("错误: %s", err.Error()))
+			updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("错误: %s", err.Error()))
 		} else {
-			logToUIAndSystem(result)
+			updateLog(ossLogText, "[OSS配置]", result)
 		}
 	})
+
 	refreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {
 		refreshConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEntry, accessKeyIDEntry, secretAccessKeyEntry, useSSLCheck)
 	})
@@ -141,6 +137,6 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	return container.NewVBox(
 		mainContainer,
-		logText,
+		ossLogText,
 	)
 }
