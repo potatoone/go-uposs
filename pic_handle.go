@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/database"
+	"go-uposs/utils"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -41,7 +41,7 @@ func CompressImage(srcPath string, quality, width int) error {
 	if err != nil {
 		// 尝试删除数据库记录
 		fileName := filepath.Base(srcPath)
-		if delDBErr := database.DeleteFileCopyRecord(fileName, true); delDBErr != nil {
+		if delDBErr := utils.DeleteFileCopyRecord(fileName, true); delDBErr != nil {
 			return fmt.Errorf("\n解码图像失败、删除数据库记录失败且删除文件失败: 解码错误 %v, 删除数据库记录错误 %v", err, delDBErr)
 		}
 		// 尝试删除无法解码的图片

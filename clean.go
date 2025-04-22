@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/database"
 	"go-uposs/utils" // 导入 utils 包
 	"log"
 	"os"
@@ -139,8 +138,7 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 
 	// 需要清理的表和它们的日期字段
 	tablesAndFields := map[string]string{
-		"auto_copy_records":      "copy_dir",
-		"scheduled_copy_records": "copy_dir",
+		"copy_records": "copy_dir",
 	}
 
 	if !dryRun {
@@ -150,7 +148,7 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 
 			log.Printf("[CLEAN] 执行SQL: %s 参数: %s, %s", query, startDateStr, endDateStr)
 
-			result, err := database.ExecDB(query, startDateStr, endDateStr)
+			result, err := utils.ExecDB(query, startDateStr, endDateStr)
 			if err != nil {
 				log.Printf("[CLEAN] 清理%s记录失败: %v", table, err)
 				continue
@@ -162,7 +160,7 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 		}
 
 		// 执行VACUUM优化数据库大小
-		_, err := database.ExecDB("VACUUM")
+		_, err := utils.ExecDB("VACUUM")
 		if err != nil {
 			log.Printf("[CLEAN] 清理数据库失败: %v", err)
 		} else {
@@ -176,7 +174,7 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 			log.Printf("[CLEAN] 执行SQL: %s 参数: %s, %s", query, startDateStr, endDateStr)
 
 			var count int64
-			row := database.QueryRowDB(query, startDateStr, endDateStr)
+			row := utils.QueryRowDB(query, startDateStr, endDateStr)
 			if err := row.Scan(&count); err != nil {
 				log.Printf("[CLEAN] 计算%s记录数失败: %v", table, err)
 				continue

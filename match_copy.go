@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/database"
+	"go-uposs/utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -66,7 +66,7 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 	fileName := filepath.Base(src)
 
 	// 检查文件是否已经复制过
-	exists, err := database.CheckFileExists(fileName, isAutoTask)
+	exists, err := utils.CheckFileExists(fileName, isAutoTask)
 	if err != nil {
 		// 数据库错误，记录到文件日志
 		logMsg := fmt.Sprintf("检查文件是否存在时出错: %v", err)
@@ -146,7 +146,7 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 	currentDate := time.Now().Format("2006.01.02")
 
 	// 将复制记录添加到数据库，移除 parsedNames 参数
-	if err = database.RecordFileCopy(fileName, currentDate, dateRange, isAutoTask, "success"); err != nil {
+	if err = utils.RecordFileCopy(fileName, currentDate, isAutoTask); err != nil {
 		// 数据库错误仅记录，不影响复制结果
 		logMsg := fmt.Sprintf("记录文件复制失败: %v", err)
 		if isAutoTask {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/database"
 	"log"
 	"os"
 	"path/filepath"
@@ -41,11 +40,11 @@ func initDatabase() error {
 	}
 
 	dbPath := filepath.Join(dataDir, "uposs.db")
-	dbConfig := &database.DBConfig{
+	dbConfig := &utils.DBConfig{
 		DBPath: dbPath,
 	}
 
-	return database.InitDB(dbConfig)
+	return utils.InitDB(dbConfig)
 }
 
 // ShowPasswordDialogIfNeeded 根据配置决定是否显示密码对话框
@@ -81,7 +80,7 @@ func main() {
 		MainLogToFile(fmt.Sprintf("初始化数据库失败: %v", err))
 		log.Fatalf("初始化数据库失败: %v", err)
 	}
-	defer database.CloseDB()
+	defer utils.CloseDB()
 
 	// 加载配置
 	config, err := LoadConfig("config.json") // 使用相对路径
