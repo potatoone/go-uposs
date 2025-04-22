@@ -101,10 +101,9 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 								err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, true)
 								if err != nil {
 									SchedLogToFile(fmt.Sprintf("处理图像失败: %s", err.Error()))
-									updateUIOnTaskEnd()
-									return
+								} else {
+									SchedLogToFile("图像处理完成")
 								}
-								SchedLogToFile("图像处理完成")
 
 								// 添加短暂延迟确保文件操作完成
 								time.Sleep(500 * time.Millisecond)

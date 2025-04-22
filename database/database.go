@@ -113,6 +113,17 @@ func CheckFileExists(fileName string, isAutoTask bool) (bool, error) {
 	return count > 0, nil
 }
 
+// DeleteFileCopyRecord 删除文件复制记录
+func DeleteFileCopyRecord(fileName string, isAutoTask bool) error {
+	var err error
+	if isAutoTask {
+		_, err = db.Exec("DELETE FROM auto_copy_records WHERE file_name =?", fileName)
+	} else {
+		_, err = db.Exec("DELETE FROM scheduled_copy_records WHERE file_name =?", fileName)
+	}
+	return err
+}
+
 // RecordFileCopy 记录文件复制操作
 func RecordFileCopy(fileName string, copyDir string, dateRange string, isAutoTask bool, status string) error {
 	if isAutoTask {

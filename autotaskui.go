@@ -92,10 +92,9 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 					err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, false)
 					if err != nil {
 						AutoLogToFile(fmt.Sprintf("处理图像失败: %s", err.Error()))
-						updateUIOnTaskEnd()
-						return
+					} else {
+						AutoLogToFile("图像处理完成")
 					}
-					AutoLogToFile("图像处理完成")
 
 					// 步骤3: 上传图片
 					AutoLogToFile("开始上传图片到OSS...")

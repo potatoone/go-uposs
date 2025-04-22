@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go-uposs/database"
 	"image"
 	"image/gif"
 	"image/jpeg"
@@ -15,13 +16,13 @@ import (
 )
 
 // CompressImage 根据配置压缩图像
+// CompressImage 根据配置压缩图像
 func CompressImage(srcPath string, quality, width int) error {
 	// 打开源文件
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Errorf("无法打开源文件: %v", err)
 	}
-	defer srcFile.Close()
 
 	// 解码图像
 	var img image.Image
@@ -33,8 +34,21 @@ func CompressImage(srcPath string, quality, width int) error {
 	case strings.HasSuffix(strings.ToLower(srcPath), ".gif"):
 		img, err = gif.Decode(srcFile)
 	}
+
+	// 关闭文件，释放文件锁
+	srcFile.Close()
+
 	if err != nil {
-		return fmt.Errorf("解码图像失败: %v", err)
+		// 尝试删除数据库记录
+		fileName := filepath.Base(srcPath)
+		if delDBErr := database.DeleteFileCopyRecord(fileName, true); delDBErr != nil {
+			return fmt.Errorf("\n解码图像失败、删除数据库记录失败且删除文件失败: 解码错误 %v, 删除数据库记录错误 %v", err, delDBErr)
+		}
+		// 尝试删除无法解码的图片
+		if delErr := os.Remove(srcPath); delErr != nil {
+			return fmt.Errorf("\n解码图像失败、删除数据库记录成功但删除文件失败: 解码错误 %v, 删除文件错误 %v", err, delErr)
+		}
+		return fmt.Errorf("\n解码图像失败，已删除数据库记录和文件: %v", err)
 	}
 
 	// 调整图像大小
