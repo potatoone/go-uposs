@@ -77,12 +77,12 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 		}
 	} else if exists {
 		// 普通操作信息，只记录到文件日志
-		logMsg := fmt.Sprintf("文件 %s 已经复制过，跳过", fileName)
-		if isAutoTask {
-			AutoLogToFile(logMsg)
-		} else {
-			SchedLogToFile(logMsg)
-		}
+		// logMsg := fmt.Sprintf("文件 %s 已经复制过，跳过", fileName)
+		// if isAutoTask {
+		// 	AutoLogToFile(logMsg)
+		// } else {
+		// 	SchedLogToFile(logMsg)
+		// }
 		return nil
 	}
 
