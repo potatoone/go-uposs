@@ -131,10 +131,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 										} else {
 											SchedLogToFile("重试成功，所有图片上传完成")
 										}
-
 									}
-								} else {
-									SchedLogToFile("所有图片上传完成")
 								}
 
 								// 当前执行周期完成

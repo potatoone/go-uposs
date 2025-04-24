@@ -37,7 +37,7 @@ class API2Handler(BaseHTTPRequestHandler):
             file_url = json_data.get("fileUrl", "")  # 注意: fileUrl 使用小写 u
             
             # 记录到控制台
-            print(f"订单号: {order_number}")
+            print(f"文件编号: {order_number}")
             print(f"文件URL: {file_url}")
             
             # 写入日志文件
@@ -89,7 +89,7 @@ def run_server():
     print(f"API2 测试服务器启动在 http://localhost:{PORT}")
     print("推送接口: POST http://localhost:3001")
     # 修改预期数据结构
-    print('预期数据格式: { "orderNumber": "订单号", "fileUrl": "图片URL" }')
+    print('预期数据格式: { "orderNumber": "订编号", "fileUrl": "图片URL" }')
     httpd.serve_forever()
 
 if __name__ == '__main__':

@@ -9,7 +9,7 @@ import (
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-// InitMinioClient 初始化 MinIO 客户端
+// InitMinioClient 初始化 minio 客户端
 func InitMinioClient(config *Config, useSSL bool) (*minio.Client, error) {
 	client, err := minio.New(config.Endpoint, &minio.Options{
 		Creds:  credentials.NewStaticV4(config.AccessKeyID, config.SecretAccessKey, ""),
@@ -26,14 +26,14 @@ func InitMinioClient(config *Config, useSSL bool) (*minio.Client, error) {
 	return client, nil
 }
 
-// TestConnection 测试 MinIO 连接（带超时）
+// TestConnection 测试 minio 连接（带超时）
 func TestConnection(client *minio.Client) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	_, err := client.ListBuckets(ctx)
 	if err != nil {
-		return fmt.Errorf("MinIO 连接测试失败: %v", err)
+		return fmt.Errorf("minio 连接测试失败: %v", err)
 	}
 	return nil
 }
@@ -52,11 +52,11 @@ func TestMinioConnection(useSSL bool) (string, error) {
 	// 记录连接测试开始
 	updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("测试与 %s 的连接 (UseSSL: %t)", config.Endpoint, useSSL)) // 更新日志
 
-	// 初始化 MinIO 客户端
+	// 初始化 minio 客户端
 	client, err := InitMinioClient(config, useSSL)
 	if err != nil {
 		// 记录初始化失败
-		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("初始化MinIO客户端失败: %v", err)) // 更新日志
+		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("初始化minio客户端失败: %v", err)) // 更新日志
 		return "", err
 	}
 

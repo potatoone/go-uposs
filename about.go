@@ -24,7 +24,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 		return nil
 	}
 
-	// 添加单号输入文本框
+	// 添加编号输入文本框
 	orderNumberEntry := widget.NewEntry()
 	orderNumberEntry.SetPlaceHolder("数据清理：不输入默认清理选择日期范围的所有记录，可输入一个或多个编号（逗号分割）")
 
@@ -68,7 +68,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 			return
 		}
 
-		// 获取单号输入并处理
+		// 获取编号输入并处理
 		orderNumbersInput := strings.TrimSpace(orderNumberEntry.Text)
 		var orderNumbers []string
 		if orderNumbersInput != "" {
@@ -111,7 +111,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 					updateLog(aboutLogText, "[关于]", logMsg)
 				}
 
-				// 清理数据库记录，传递单号参数
+				// 清理数据库记录，传递编号参数
 				recordCount, err := cleanDbRecordsByDateAndNumbers(cleanCfg, orderNumbers, false)
 				if err != nil {
 					log.Printf("清理数据库记录出错: %v", err)
@@ -119,7 +119,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 				logMsg = fmt.Sprintf("已清理从 %s 到 %s 的 %d 条数据库记录",
 					startTimeText, endTimeText, recordCount)
 				if len(orderNumbers) > 0 {
-					logMsg += fmt.Sprintf("，匹配单号: %s", strings.Join(orderNumbers, ", "))
+					logMsg += fmt.Sprintf("，匹配编号: %s", strings.Join(orderNumbers, ", "))
 				}
 				updateLog(aboutLogText, "[关于]", logMsg)
 			}()
@@ -298,7 +298,7 @@ func createAboutUI(win fyne.Window) fyne.CanvasObject {
 	)
 
 	aboutCard := widget.NewCard(
-		"版本 v1.7.0",
+		"版本 v1.7.3",
 		"应用功能：复制、压缩指定路径的图片，上传至 Minio，根据文件名查询API1，将文件 OSS 链接推送至 API2",
 		container.NewVBox(
 			authorContainer, // 使用放在一行的作者信息

@@ -116,7 +116,7 @@ func cleanLogFilesByDateRange(config CleanConfig, dryRun bool) (int, int64, erro
 	return removedCount, totalSize, nil
 }
 
-// cleanDatabaseRecordsByDateAndNumbers 按日期范围和单号清理数据库记录
+// cleanDatabaseRecordsByDateAndNumbers 按日期范围和编号清理数据库记录
 func cleanDbRecordsByDateAndNumbers(config CleanConfig, orderNumbers []string, dryRun bool) (int64, error) {
 	// 解析日期范围
 	_, err := time.Parse("2006.01.02", config.StartTime)
@@ -135,7 +135,7 @@ func cleanDbRecordsByDateAndNumbers(config CleanConfig, orderNumbers []string, d
 
 	log.Printf("[CLEAN] 清理从 %s 到 %s 的数据库记录", startDateStr, endDateStr)
 	if len(orderNumbers) > 0 {
-		log.Printf("[CLEAN] 筛选包含单号的记录: %v", orderNumbers)
+		log.Printf("[CLEAN] 筛选包含编号的记录: %v", orderNumbers)
 	}
 
 	var totalDeleted int64
@@ -153,7 +153,7 @@ func cleanDbRecordsByDateAndNumbers(config CleanConfig, orderNumbers []string, d
 		whereClauses = append(whereClauses, fmt.Sprintf("%s BETWEEN ? AND ?", dateField))
 		args = append(args, startDateStr, endDateStr)
 
-		// 添加单号条件
+		// 添加编号条件
 		if len(orderNumbers) > 0 {
 			var orClauses []string
 			for _, num := range orderNumbers {

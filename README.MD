@@ -1,5 +1,5 @@
 # GO-UPOSS
-![image](https://github.com/potatoone/go-uposs/blob/main/screenshot/1.png)
+![image](https://github.com/potatoone/go-uposs/blob/main/data/screenshot/1.png)
 
 ## 1.项目介绍
 

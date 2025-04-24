@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// ParseImageName 解析图片名称，通过逗号分割文件名中的单号，排除括号包围的字符串
+// ParseImageName 解析图片名称，通过逗号分割文件名中的编号，排除括号包围的字符串
 func ParseImageName(fileName string) []string {
 	// 去掉文件扩展名
 	fileName = strings.TrimSuffix(fileName, filepath.Ext(fileName))

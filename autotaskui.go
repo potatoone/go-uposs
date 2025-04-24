@@ -97,7 +97,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 					}
 
 					// 步骤3: 上传图片
-					AutoLogToFile("开始上传图片到OSS...")
+					AutoLogToFile("开始上传流程...")
 
 					err = UploadImagesWithTaskType(newConfig, false) // 指定为自动任务
 					if err != nil {
@@ -118,10 +118,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 							} else {
 								AutoLogToFile("重试成功，所有图片上传完成")
 							}
-
 						}
-					} else {
-						AutoLogToFile("所有图片上传完成")
 					}
 
 					// 当前执行周期完成
