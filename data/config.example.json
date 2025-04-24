@@ -15,7 +15,7 @@
   "end_time": "2025.04.24",
   "io_buffer": 409600,
   "auto_interval": "60",
-  "sched_interval": "20",
+  "sched_times": "2",
   "api1": "查询APAI",
   "api2": "推送API",
   "api1_response1": "API1 编号查询有效响应",

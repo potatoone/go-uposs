@@ -63,27 +63,42 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 					wg.Add(1)
 					go func() {
 						defer wg.Done()
-						for {
+
+						// 加载配置，获取最大执行次数
+						newConfig, err := LoadConfig("config.json")
+						if err != nil {
+							SchedLogToFile(fmt.Sprintf("加载配置失败: %s", err.Error()))
+							updateUIOnTaskEnd()
+							return
+						}
+						maxExecutions, err := strconv.Atoi(newConfig.SchedTimes)
+						if err != nil || maxExecutions <= 0 {
+							SchedLogToFile(fmt.Sprintf("无效的执行次数: %s", newConfig.SchedTimes))
+							updateUIOnTaskEnd()
+							return
+						}
+
+						for executionCount := 0; executionCount < maxExecutions; executionCount++ {
 							select {
 							case <-stopChan:
 								return
 							default:
-								// 加载最新配置
-								newConfig, err := LoadConfig("config.json") // 只传递文件名
+								// 每轮重新加载配置，允许任务期间动态更新配置
+								newConfig, err = LoadConfig("config.json")
 								if err != nil {
 									SchedLogToFile(fmt.Sprintf("加载配置失败: %s", err.Error()))
 									updateUIOnTaskEnd()
 									return
 								}
 
-								// 检查配置有效性
 								if newConfig.IOBuffer <= 0 {
 									SchedLogToFile("缓冲区大小必须大于零")
 									updateUIOnTaskEnd()
 									return
 								}
 
-								// 步骤1: 首先扫描和复制文件
+								SchedLogToFile(fmt.Sprintf("第 %d 次任务开始...", executionCount+1))
+
 								SchedLogToFile("开始扫描和复制文件...")
 								err = ScanAndCopyFolders(newConfig)
 								if err != nil {
@@ -92,11 +107,8 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 									return
 								}
 								SchedLogToFile("文件扫描和复制完成")
-
-								// 添加短暂延迟确保文件操作完成
 								time.Sleep(500 * time.Millisecond)
 
-								// 步骤2: 然后处理图像
 								SchedLogToFile("开始处理图像...")
 								err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, true)
 								if err != nil {
@@ -104,27 +116,19 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 								} else {
 									SchedLogToFile("图像处理完成")
 								}
-
-								// 添加短暂延迟确保文件操作完成
 								time.Sleep(500 * time.Millisecond)
 
-								// 步骤3: 最后上传图片
 								SchedLogToFile("开始上传图片到OSS...")
-								err = UploadImagesWithTaskType(newConfig, true) // 指定为计划任务
+								err = UploadImagesWithTaskType(newConfig, true)
 								if err != nil {
 									if err.Error() == "无文件可上传" {
-										// 特殊处理"无文件可上传"的情况
 										SchedLogToFile("无文件可上传")
 									} else {
-										// 其他错误，先记录错误，再尝试重试一次
 										SchedLogToFile(fmt.Sprintf("上传图片失败: %v，\n20 秒后重试一次...", err))
 										time.Sleep(20 * time.Second)
-
-										// 再次尝试上传
 										err = UploadImagesWithTaskType(newConfig, true)
 										if err != nil {
 											SchedLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
-											// 发送企业微信通知
 											if notifyErr := newConfig.NotifyUploadFailed(); notifyErr != nil {
 												SchedLogToFile(fmt.Sprintf("发送企业微信通知: %v", notifyErr))
 											}
@@ -134,29 +138,17 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 									}
 								}
 
-								// 当前执行周期完成
 								currentTime := time.Now().Format("2006.01.02 15:04:05")
-								SchedLogToFile(fmt.Sprintf("%s 当前执行周期已完成", currentTime))
+								SchedLogToFile(fmt.Sprintf("%s 当前执行周期已完成 (%d/%d)", currentTime, executionCount+1, maxExecutions))
 
-								// 等待设定的间隔时间后执行下一次任务
-								interval, err := strconv.Atoi(newConfig.SchedInterval)
-								if err != nil {
-									SchedLogToFile(fmt.Sprintf("无效的间隔时间: %s", newConfig.SchedInterval))
-									updateUIOnTaskEnd()
-									return
-								}
-
-								SchedLogToFile(fmt.Sprintf("将在 %d 秒后开始下一次任务执行...", interval))
-
-								select {
-								case <-stopChan:
-									return
-								case <-time.After(time.Duration(interval) * time.Second):
-									// 继续下一个循环
-								}
+								// 不等待间隔，立即进入下一轮或结束
 							}
 						}
+
+						SchedLogToFile("所有计划任务已完成 ✅")
+						updateUIOnTaskEnd()
 					}()
+
 				}
 			}, myWindow)
 		} else {
@@ -190,11 +182,11 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建 sched_interval 文本框和保存按钮
 	schedIntervalEntry := widget.NewEntry()
-	schedIntervalEntry.SetText(config.SchedInterval)
+	schedIntervalEntry.SetText(config.SchedTimes)
 
 	// 创建标签
-	intervalLabel := widget.NewLabel("执行间隔:")
-	sLabel := widget.NewLabel("s")
+	intervalLabel := widget.NewLabel("执行次数:")
+	sLabel := widget.NewLabel("次")
 
 	// 设置输入框的宽度
 	schedIntervalContainer := container.NewHBox(
@@ -203,18 +195,18 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		sLabel,
 	)
 
-	saveButton := widget.NewButton("修改执行间隔", func() {
+	saveButton := widget.NewButton("修改执行次数", func() {
 		dialog.ShowConfirm("确认保存", "确定要保存配置吗？", func(confirm bool) {
 			if confirm {
 				// 验证输入
 				interval, err := strconv.Atoi(schedIntervalEntry.Text)
 				if err != nil || interval <= 0 {
-					dialog.ShowInformation("输入错误", "请输入有效的时间间隔（正整数）", myWindow)
+					dialog.ShowInformation("输入错误", "请输入有效的循环执行次数（正整数）", myWindow)
 					return
 				}
 
 				// 直接更新当前配置
-				config.SchedInterval = schedIntervalEntry.Text
+				config.SchedTimes = schedIntervalEntry.Text
 
 				// 保存配置 - 直接使用文件名
 				if err := SaveConfig("config.json", config); err != nil {

@@ -32,8 +32,8 @@ type Config struct {
 
 	IOBuffer int `json:"io_buffer"` // 缓冲区大小，以KB为单位
 
-	AutoInterval  string `json:"auto_interval"`  // 自动间隔时间
-	SchedInterval string `json:"sched_interval"` // 计划间隔时间
+	AutoInterval string `json:"auto_interval"` // 自动间隔时间
+	SchedTimes   string `json:"sched_times"`   // 计划任务执行次数
 
 	API1          string `json:"api1"`           // API1 URL
 	API2          string `json:"api2"`           // API2 URL

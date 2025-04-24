@@ -122,7 +122,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 					}
 
 					// 当前执行周期完成
-					AutoLogToFile("当前执行周期已完成")
+					AutoLogToFile("当前执行周期已完成 ✅")
 
 					// 获取间隔时间
 					interval, err := strconv.Atoi(newConfig.AutoInterval)

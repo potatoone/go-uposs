@@ -36,6 +36,6 @@ function Convert-PngToIco {
 }
 
 # 使用示例
-$pngPath = ".\icon\icon.png"
-$icoPath = ".\icon\icon.ico"
+$pngPath = ".\icon.png"
+$icoPath = ".\icon.ico"
 Convert-PngToIco -PngPath $pngPath -IcoPath $icoPath
