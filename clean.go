@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -115,8 +116,8 @@ func cleanLogFilesByDateRange(config CleanConfig, dryRun bool) (int, int64, erro
 	return removedCount, totalSize, nil
 }
 
-// cleanDatabaseRecordsByDateRange 按日期范围清理数据库记录
-func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, error) {
+// cleanDatabaseRecordsByDateAndNumbers 按日期范围和单号清理数据库记录
+func cleanDbRecordsByDateAndNumbers(config CleanConfig, orderNumbers []string, dryRun bool) (int64, error) {
 	// 解析日期范围
 	_, err := time.Parse("2006.01.02", config.StartTime)
 	if err != nil {
@@ -133,48 +134,62 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 	endDateStr := config.EndTime
 
 	log.Printf("[CLEAN] 清理从 %s 到 %s 的数据库记录", startDateStr, endDateStr)
+	if len(orderNumbers) > 0 {
+		log.Printf("[CLEAN] 筛选包含单号的记录: %v", orderNumbers)
+	}
 
 	var totalDeleted int64
 
-	// 需要清理的表和它们的日期字段
+	// 需要清理的表和复制文件夹字段
 	tablesAndFields := map[string]string{
 		"copy_records": "copy_dir",
 	}
 
-	if !dryRun {
-		// 实际执行删除操作
-		for table, dateField := range tablesAndFields {
-			query := fmt.Sprintf("DELETE FROM %s WHERE %s BETWEEN ? AND ?", table, dateField)
+	for table, dateField := range tablesAndFields {
+		var whereClauses []string
+		var args []interface{}
 
-			log.Printf("[CLEAN] 执行SQL: %s 参数: %s, %s", query, startDateStr, endDateStr)
+		// 添加日期范围条件
+		whereClauses = append(whereClauses, fmt.Sprintf("%s BETWEEN ? AND ?", dateField))
+		args = append(args, startDateStr, endDateStr)
 
-			result, err := utils.ExecDB(query, startDateStr, endDateStr)
+		// 添加单号条件
+		if len(orderNumbers) > 0 {
+			var orClauses []string
+			for _, num := range orderNumbers {
+				orClauses = append(orClauses, "file_name LIKE ?")
+				args = append(args, "%"+num+"%")
+			}
+			whereClauses = append(whereClauses, "("+strings.Join(orClauses, " OR ")+")")
+		}
+
+		where := strings.Join(whereClauses, " AND ") // 组合WHERE子句
+
+		if !dryRun {
+			// 实际执行删除操作
+			query := fmt.Sprintf("DELETE FROM %s WHERE %s", table, where)
+			log.Printf("[CLEAN] 执行SQL: %s 参数: %v", query, args)
+
+			result, err := utils.ExecDB(query, args...)
 			if err != nil {
 				log.Printf("[CLEAN] 清理%s记录失败: %v", table, err)
 				continue
 			}
 
-			rowsDeleted, _ := result.RowsAffected()
+			rowsDeleted, err := result.RowsAffected() // 获取受影响的行数
+			if err != nil {
+				log.Printf("[CLEAN] 获取%s受影响行数失败: %v", table, err)
+				continue
+			}
 			totalDeleted += rowsDeleted
 			log.Printf("[CLEAN] 已从%s中删除 %d 条记录", table, rowsDeleted)
-		}
-
-		// 执行VACUUM优化数据库大小
-		_, err := utils.ExecDB("VACUUM")
-		if err != nil {
-			log.Printf("[CLEAN] 清理数据库失败: %v", err)
 		} else {
-			log.Println("[CLEAN] 数据库清理完成")
-		}
-	} else {
-		// 干运行模式，只计数不删除
-		for table, dateField := range tablesAndFields {
-			query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s BETWEEN ? AND ?", table, dateField)
-
-			log.Printf("[CLEAN] 执行SQL: %s 参数: %s, %s", query, startDateStr, endDateStr)
+			// 干运行模式，只计数不删除
+			query := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s", table, where)
+			log.Printf("[CLEAN] 执行SQL: %s 参数: %v", query, args)
 
 			var count int64
-			row := utils.QueryRowDB(query, startDateStr, endDateStr)
+			row := utils.QueryRowDB(query, args...)
 			if err := row.Scan(&count); err != nil {
 				log.Printf("[CLEAN] 计算%s记录数失败: %v", table, err)
 				continue
@@ -182,6 +197,16 @@ func cleanDatabaseRecordsByDateRange(config CleanConfig, dryRun bool) (int64, er
 
 			totalDeleted += count
 			log.Printf("[CLEAN] 将从%s中删除 %d 条记录", table, count)
+		}
+	}
+
+	// 执行VACUUM优化数据库大小
+	if !dryRun {
+		_, err := utils.ExecDB("VACUUM")
+		if err != nil {
+			log.Printf("[CLEAN] 执行VACUUM失败: %v", err)
+		} else {
+			log.Println("[CLEAN] 数据库清理完成")
 		}
 	}
 

@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/url"
+	"strings"
 	"time"
 
 	"go-uposs/utils"
@@ -22,11 +24,15 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 		return nil
 	}
 
-	aboutLogText := widget.NewMultiLineEntry()
-	aboutLogText.SetMinRowsVisible(6)
+	// 添加单号输入文本框
+	orderNumberEntry := widget.NewEntry()
+	orderNumberEntry.SetPlaceHolder("数据清理：不输入默认清理选择日期范围的所有记录，可输入一个或多个编号（逗号分割）")
 
 	// 直接将日期选择UI放在界面上，使用专门的清理日期UI
 	dateUI := CreateCleanDateUI(win, config)
+
+	aboutLogText := widget.NewMultiLineEntry()
+	aboutLogText.SetMinRowsVisible(6)
 
 	// 添加清除日志文件复选框
 	clearLogCheck := widget.NewCheck("同时删除日志", nil)
@@ -62,6 +68,16 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 			return
 		}
 
+		// 获取单号输入并处理
+		orderNumbersInput := strings.TrimSpace(orderNumberEntry.Text)
+		var orderNumbers []string
+		if orderNumbersInput != "" {
+			orderNumbers = strings.Split(orderNumbersInput, ",")
+			for i := range orderNumbers {
+				orderNumbers[i] = strings.TrimSpace(orderNumbers[i])
+			}
+		}
+
 		// 根据复选框状态构建确认消息
 		var confirmMsg string
 		if clearLogCheck.Checked {
@@ -95,12 +111,17 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 					updateLog(aboutLogText, "[关于]", logMsg)
 				}
 
-				// 清理数据库记录
-				recordCount, _ := cleanDatabaseRecordsByDateRange(cleanCfg, false)
+				// 清理数据库记录，传递单号参数
+				recordCount, err := cleanDbRecordsByDateAndNumbers(cleanCfg, orderNumbers, false)
+				if err != nil {
+					log.Printf("清理数据库记录出错: %v", err)
+				}
 				logMsg = fmt.Sprintf("已清理从 %s 到 %s 的 %d 条数据库记录",
 					startTimeText, endTimeText, recordCount)
+				if len(orderNumbers) > 0 {
+					logMsg += fmt.Sprintf("，匹配单号: %s", strings.Join(orderNumbers, ", "))
+				}
 				updateLog(aboutLogText, "[关于]", logMsg)
-
 			}()
 		}, win)
 	})
@@ -123,7 +144,7 @@ func createCleanSettingsUI(win fyne.Window) fyne.CanvasObject {
 
 	// 将日志输出控件放在主容器的底部
 	mainContainer := container.NewVBox(
-		widget.NewLabelWithStyle("清理数据", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		orderNumberEntry,
 		topContainer,
 		container.NewVBox(
 			aboutLogText,
@@ -277,7 +298,7 @@ func createAboutUI(win fyne.Window) fyne.CanvasObject {
 	)
 
 	aboutCard := widget.NewCard(
-		"版本 v1.6.0",
+		"版本 v1.7.0",
 		"应用功能：复制、压缩指定路径的图片，上传至 Minio，根据文件名查询API1，将文件 OSS 链接推送至 API2",
 		container.NewVBox(
 			authorContainer, // 使用放在一行的作者信息

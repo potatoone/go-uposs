@@ -142,11 +142,11 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 		}
 	}
 
-	// 获取当前日期，格式为 2025.03.09
-	currentDate := time.Now().Format("2006.01.02")
+	// 获取复制源完整路径的最后路径 (即包含日期的文件夹)
+	copyDir := filepath.Base(filepath.Dir(src))
 
 	// 将复制记录添加到数据库，移除 parsedNames 参数
-	if err = utils.RecordFileCopy(fileName, currentDate, isAutoTask); err != nil {
+	if err = utils.RecordFileCopy(fileName, copyDir, isAutoTask); err != nil {
 		// 数据库错误仅记录，不影响复制结果
 		logMsg := fmt.Sprintf("记录文件复制失败: %v", err)
 		if isAutoTask {
