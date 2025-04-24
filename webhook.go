@@ -10,7 +10,7 @@ import (
 // NotifyUploadFailed 发送上传失败通知到企业微信
 func (config *Config) NotifyUploadFailed() error {
 	content := fmt.Sprintf(
-		"图片第二次上传失败😭\n"+
+		"图片第二次上传失败❌😅\n"+
 			">存储桶:<font color=\"warning\"> %s</font>\n"+
 			">机器代号:<font color=\"warning\"> %s</font>",
 		config.BucketName, config.MachineCode,

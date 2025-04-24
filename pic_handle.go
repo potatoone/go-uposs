@@ -16,7 +16,6 @@ import (
 )
 
 // CompressImage 根据配置压缩图像
-// CompressImage 根据配置压缩图像
 func CompressImage(srcPath string, quality, width int) error {
 	// 打开源文件
 	srcFile, err := os.Open(srcPath)
