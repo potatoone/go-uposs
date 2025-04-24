@@ -57,11 +57,6 @@ func QueryAPI1(apiURL, orderNumber string) (string, error) {
 		return "", fmt.Errorf("解析JSON响应失败: %v, 响应内容: %s", err, string(body))
 	}
 
-	// 检查响应状态码
-	if response.Code == 200 {
-		return fmt.Sprintf("200:%s", response.Order), nil
-	}
-
 	return fmt.Sprintf("%d:%s", response.Code, string(body)), nil
 }
 
@@ -122,11 +117,6 @@ func PushToAPI2(apiURL string, orderNumber string, fileUrl string) (string, erro
 	err = json.Unmarshal(body, &response)
 	if err != nil {
 		return string(body), fmt.Errorf("解析JSON响应失败: %v", err)
-	}
-
-	// 检查响应状态码
-	if response.Code != 200 {
-		return string(body), fmt.Errorf("API2响应状态码非200: %d, 消息: %s", response.Code, response.Msg)
 	}
 
 	return string(body), nil

@@ -78,14 +78,14 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 					}
 					continue
 				}
-				if strings.HasPrefix(apiResponse, "200:") {
+				if strings.HasPrefix(apiResponse, config.API1Response1) {
 					logUploadMessage(fmt.Sprintf("API1 查询成功，编号: %s 有效, 响应: %s", orderNumber, apiResponse), isScheduledTask)
 					validOrderFound = true
 					validOrderNumber = orderNumber
 					break
 				}
-				if strings.HasPrefix(apiResponse, "109:") {
-					logUploadMessage(fmt.Sprintf("API1 查询返回无效状态109: 编号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
+				if strings.HasPrefix(apiResponse, config.API1Response2) {
+					logUploadMessage(fmt.Sprintf("API1 查询返回无效状态: 编号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
 					explicitInvalid = true
 					break
 				}

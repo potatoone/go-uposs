@@ -35,9 +35,11 @@ type Config struct {
 	AutoInterval  string `json:"auto_interval"`  // 自动间隔时间
 	SchedInterval string `json:"sched_interval"` // 计划间隔时间
 
-	API1       string `json:"api1"`        // API1 URL
-	API2       string `json:"api2"`        // API2 URL
-	WebhookURL string `json:"webhook_url"` // 企业微信Webhook URL
+	API1          string `json:"api1"`           // API1 URL
+	API2          string `json:"api2"`           // API2 URL
+	API1Response1 string `json:"api1_response1"` // API1 编号查询有效响应
+	API1Response2 string `json:"api1_response2"` // API1 编号查询无效响应
+	WebhookURL    string `json:"webhook_url"`    // 企业微信Webhook URL
 
 	CleanStartTime string `json:"cleaStartTime"`
 	CleanEndTime   string `json:"cleanEndTime"`

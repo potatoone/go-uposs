@@ -18,6 +18,8 @@
   "sched_interval": "20",
   "api1": "查询APAI",
   "api2": "推送API",
+  "api1_response1": "API1 编号查询有效响应",
+  "api1_response2": "API1 编号查询无效响应",
   "webhook_url": "企业微信机器人webhook地址",
   "cleaStartTime": "2025.01.01",
   "cleanEndTime": "2025.03.17",

@@ -50,7 +50,7 @@ func TestAPIHTTP(apiURL string) (int, time.Duration, error) {
 
 // FormatAPITestResult 格式化 API 测试结果
 func FormatAPITestResult(statusCode int, duration time.Duration) string {
-	if statusCode >= 200 && statusCode < 400 {
+	if statusCode >= 200 && statusCode < 500 {
 		return fmt.Sprintf("接口可用 (状态码: %d, 响应时间: %s)", statusCode, duration)
 	} else {
 		return fmt.Sprintf("接口状态码: %d, 响应时间: %s", statusCode, duration)
@@ -66,17 +66,25 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	api2Entry := widget.NewEntry()
 	api2Entry.SetText(config.API2)
 
+	api1response1 := widget.NewEntry() // API1 有效响应 输入框
+	api1response1.SetText(config.API1Response1)
+
+	api1response2 := widget.NewEntry() // API1 无效响应 输入框
+	api1response2.SetText(config.API1Response2)
+
 	webhookEntry := widget.NewEntry()
 	webhookEntry.SetText(config.WebhookURL)
 
 	// 创建标签
 	api1Label := widget.NewLabel("API 1:")
 	api2Label := widget.NewLabel("API 2:")
+	api1Response1Label := widget.NewLabel("API1 有效响应:")
+	api1Response2Label := widget.NewLabel("API1 无效响应:")
 	webhookLabel := widget.NewLabel("Webhook URL:")
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
-	apiLogText.SetMinRowsVisible(18)
+	apiLogText.SetMinRowsVisible(13)
 
 	// 创建保存按钮
 	saveButton := widget.NewButton("保存配置", func() {
@@ -84,6 +92,8 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			if confirm {
 				config.API1 = api1Entry.Text
 				config.API2 = api2Entry.Text
+				config.API1Response1 = api1response1.Text
+				config.API1Response2 = api1response2.Text
 				config.WebhookURL = webhookEntry.Text
 
 				// 假设你有一个 apiLogText 变量表示 API 配置那一栏的日志框
@@ -143,7 +153,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 设置标签和输入框的宽度
 	labelWidth := 120
-	entryWidth := 500 // 减小输入框宽度，为右侧按钮腾出空间
+	entryWidth := 460 // 减小输入框宽度，为右侧按钮腾出空间
 
 	// 创建输入框的容器
 	api1Container := container.NewHBox(
@@ -154,6 +164,16 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	api2Container := container.NewHBox(
 		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api2Label),
 		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api2Entry),
+	)
+
+	api1Response1Container := container.NewHBox(
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Response1Label),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1response1),
+	)
+
+	api1Response2Container := container.NewHBox(
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Response2Label),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1response2),
 	)
 
 	webhookContainer := container.NewHBox(
@@ -190,6 +210,8 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	inputsContainer := container.NewVBox(
 		api1Container,
 		api2Container,
+		api1Response1Container,
+		api1Response2Container,
 		webhookContainer,
 	)
 
