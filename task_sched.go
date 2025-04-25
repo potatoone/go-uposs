@@ -156,7 +156,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	dateUI := CreateDateUI(myWindow, config)
 
 	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(19)
+	schedLogText.SetMinRowsVisible(17)
 
 	// 初始化进度条并
 	progressBar = widget.NewProgressBarInfinite()
