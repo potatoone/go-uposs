@@ -124,6 +124,13 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		minioFilePath := fmt.Sprintf("%s/%s/%s", minioPath, datePath, info.Name())
 		minioFilePath = strings.ReplaceAll(minioFilePath, "\\", "/")
 
+		// 从 图片配置 中获取图片大小限制作为上传大小限制，单位为 KB，转换为字节
+		maxFileSize := int64(config.PicSize) * 1024
+		if info.Size() > maxFileSize {
+			logUploadMessage(fmt.Sprintf("文件 %s 大小超过限制（%d 字节），跳过上传", info.Name(), maxFileSize), isScheduledTask)
+			return nil
+		}
+
 		//上传文件到 minio
 		_, err = client.FPutObject(context.Background(), bucketName, minioFilePath, path, minio.PutObjectOptions{})
 		if err != nil {
