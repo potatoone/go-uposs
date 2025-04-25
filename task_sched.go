@@ -36,20 +36,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 使用配置中的日志路径初始化日志文件
 	InitSchedLogger(utils.SchedLogPath)
 
-	// 创建日期 UI 组件，并获取 startTimeLabel
-	dateUI := CreateDateUI(myWindow, config)
-
-	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(17)
-
-	// 初始化进度条并
-	progressBar = widget.NewProgressBarInfinite()
-	progressBar.Stop() // 确保进度条初始为停止状态
-
-	// 初始化停止通道
-	stopChan = make(chan struct{})
-
-	// 扫描按钮
+	// 开始任务 按钮
 	scanButton = widget.NewButton("开始任务", func() {
 		if scanButton.Text == "开始任务" {
 			dialog.ShowConfirm("确认开始", "确定要开始任务吗？", func(confirm bool) {
@@ -165,6 +152,19 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		}
 	})
 
+	// 创建日期 UI 组件，并获取 startTimeLabel
+	dateUI := CreateDateUI(myWindow, config)
+
+	// 设置日志文本框
+	schedLogText.SetMinRowsVisible(19)
+
+	// 初始化进度条并
+	progressBar = widget.NewProgressBarInfinite()
+	progressBar.Stop() // 确保进度条初始为停止状态
+
+	// 初始化停止通道
+	stopChan = make(chan struct{})
+
 	// 设置按钮和进度条的宽度
 	scanButtonContainer := container.NewGridWrap(fyne.NewSize(300, 35), scanButton) // 增加按钮宽度
 	progressBarContainer := container.NewGridWrap(fyne.NewSize(485, 35), progressBar)
@@ -174,11 +174,6 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		scanButtonContainer,  // 扫描按钮
 		progressBarContainer, // 无限进度条
 	)
-
-	// 初始化无限进度条
-	progressBar.Start()
-	time.Sleep(1 * time.Second)
-	progressBar.Stop()
 
 	// 创建 sched_interval 文本框和保存按钮
 	schedIntervalEntry := widget.NewEntry()
@@ -224,6 +219,11 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		schedIntervalContainer,
 		saveButton,
 	)
+
+	// 初始化无限进度条
+	progressBar.Start()
+	time.Sleep(1 * time.Second)
+	progressBar.Stop()
 
 	// 创建 "任务界面" Tab 内容，将日期 UI 放在文件夹扫描器 UI 之前
 	return container.NewVBox(

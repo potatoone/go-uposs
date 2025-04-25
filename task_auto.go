@@ -34,7 +34,6 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		autoScanButton.SetText("开始任务")
 		autoScanButton.Importance = widget.MediumImportance
 		autoScanButton.Refresh()
-
 		AutoLogToFile("任务已停止")
 	}
 
@@ -208,11 +207,6 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		progressBarContainer, // 无限进度条
 	)
 
-	// 初始化无限进度条并确保其处于停止状态
-	autoProgressBar.Start()
-	time.Sleep(10 * time.Millisecond) // 只需要很短的时间
-	autoProgressBar.Stop()
-
 	// 创建 sched_interval 文本框和保存按钮
 	schedIntervalEntry := widget.NewEntry()
 	schedIntervalEntry.SetText(config.AutoInterval)
@@ -266,6 +260,11 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		folderScannerUI,
 		autoLogText,
 	)
+
+	// 初始化无限进度条并确保其处于停止状态
+	autoProgressBar.Start()
+	time.Sleep(10 * time.Millisecond) // 只需要很短的时间
+	autoProgressBar.Stop()
 
 	return ui
 }

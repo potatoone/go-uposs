@@ -33,6 +33,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 	fileCount := 0     // 统计处理文件数量
 	uploadedCount := 0 // 统计成功上传的文件数量
 
+	// 遍历本地路径下的所有文件
 	err = filepath.Walk(localPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -40,15 +41,24 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		if info.IsDir() {
 			return nil
 		}
-		if !strings.HasSuffix(strings.ToLower(info.Name()), ".jpeg") &&
-			!strings.HasSuffix(strings.ToLower(info.Name()), ".jpg") &&
-			!strings.HasSuffix(strings.ToLower(info.Name()), ".png") &&
-			!strings.HasSuffix(strings.ToLower(info.Name()), ".gif") {
+
+		// 检查文件是否为图片
+		ext := strings.ToLower(filepath.Ext(info.Name()))
+		if ext != ".jpeg" && ext != ".jpg" && ext != ".png" && ext != ".gif" {
+			return nil
+		}
+
+		// 获取文件夹名称
+		dir := filepath.Base(filepath.Dir(path))
+		// 检查文件夹是否在时间范围内
+		if !isFolderInTimeRange(dir, isScheduledTask, config) {
 			return nil
 		}
 
 		fileCount++
 		orderNumbers := utils.ParseImageName(info.Name())
+
+		// 解析文件名中的订单编号
 		if len(orderNumbers) == 0 {
 			logUploadMessage(fmt.Sprintf("无法从文件名解析编号: %s，删除此文件", info.Name()), isScheduledTask)
 			err = os.Remove(path)
@@ -66,6 +76,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		var validOrderNumber string
 		var explicitInvalid bool
 
+		// 遍历每个订单编号，尝试查询 API1
 		for _, orderNumber := range orderNumbers {
 			for retry := 0; retry < 2; retry++ {
 				logUploadMessage(fmt.Sprintf("正在向 API1 查询编号: %s (第%d次尝试)", orderNumber, retry+1), isScheduledTask)
@@ -97,6 +108,7 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 			}
 		}
 
+		// 如果没有找到有效的订单编号，且没有明确的无效状态，则跳过此文件
 		if !validOrderFound && explicitInvalid {
 			logUploadMessage(fmt.Sprintf("文件 %s 中没有有效编号（定义无效状态），删除此文件", info.Name()), isScheduledTask)
 			err := os.Remove(path)
