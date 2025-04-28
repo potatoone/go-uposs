@@ -298,7 +298,7 @@ func createAboutUI(win fyne.Window) fyne.CanvasObject {
 	)
 
 	aboutCard := widget.NewCard(
-		"版本 v1.7.8",
+		"版本 v1.8.0",
 		"应用功能：复制、压缩指定路径的图片，上传至 Minio，根据文件名查询API1，将文件 OSS 链接推送至 API2",
 		container.NewVBox(
 			authorContainer, // 使用放在一行的作者信息

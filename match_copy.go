@@ -17,7 +17,7 @@ func MatchDatePattern(folderName string) bool {
 }
 
 // CopyDir 复制目录及其内容
-func CopyDir(src string, dst string, bufferSize int, isAutoTask bool, dateRange string) error {
+func CopyDir(src string, dst string, bufferSize int, isAutoTask bool, dateRange string, orderNumbers string) error {
 	if bufferSize <= 0 {
 		return fmt.Errorf("无效的缓冲区大小")
 	}
@@ -37,11 +37,17 @@ func CopyDir(src string, dst string, bufferSize int, isAutoTask bool, dateRange 
 		dstPath := filepath.Join(dst, entry.Name())
 
 		if entry.IsDir() {
-			err = CopyDir(srcPath, dstPath, bufferSize, isAutoTask, dateRange)
+			err = CopyDir(srcPath, dstPath, bufferSize, isAutoTask, dateRange, orderNumbers)
 			if err != nil {
 				return err
 			}
 		} else {
+			if !isAutoTask && orderNumbers != "" {
+				matchedFiles := matchFilesByNumbers(orderNumbers, []string{entry.Name()})
+				if len(matchedFiles) == 0 {
+					continue
+				}
+			}
 			// 现在只检查数据库记录，不需要检查物理文件
 			err = CopyFile(srcPath, dstPath, bufferSize, isAutoTask, dateRange)
 			if err != nil {
@@ -168,7 +174,7 @@ func CopyFile(src, dst string, bufferSize int, isAutoTask bool, dateRange string
 }
 
 // ScanAndCopyFolders 扫描并复制匹配选定日期范围内的文件夹
-func ScanAndCopyFolders(config *Config) error {
+func ScanAndCopyFolders(config *Config, orderNumbers string) error {
 	startDate, err := time.Parse("2006.01.02", config.StartTime)
 	if err != nil {
 		return fmt.Errorf("解析开始日期失败: %v", err)
@@ -195,7 +201,7 @@ func ScanAndCopyFolders(config *Config) error {
 
 			if !folderDate.Before(startDate) && !folderDate.After(endDate) {
 				dstPath := filepath.Join(config.LocalFolder, info.Name())
-				err = CopyDir(path, dstPath, config.IOBuffer, false, dateRange)
+				err = CopyDir(path, dstPath, config.IOBuffer, false, dateRange, orderNumbers)
 				if err != nil {
 					return fmt.Errorf("复制文件夹 %s 失败: %v", path, err)
 				}
@@ -228,7 +234,7 @@ func ScanAndCopyFoldersForToday(config *Config) error {
 
 		if info.IsDir() && dateSet[info.Name()] {
 			dstPath := filepath.Join(config.LocalFolder, info.Name())
-			err = CopyDir(path, dstPath, config.IOBuffer, true, dateRange) // true 表示是自动任务
+			err = CopyDir(path, dstPath, config.IOBuffer, true, dateRange, "") // 自动任务不需要编号，参数置为空字符串
 			if err != nil {
 				return fmt.Errorf("复制文件夹 %s 失败: %v", path, err)
 			}

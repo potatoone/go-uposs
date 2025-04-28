@@ -15,11 +15,13 @@ import (
 )
 
 var (
-	schedLogText = widget.NewMultiLineEntry() // 用于显示日志信息
-	progressBar  *widget.ProgressBarInfinite  // 无限进度条
-	stopChan     chan struct{}                // 用于停止任务的通道
-	wg           sync.WaitGroup               // 用于等待任务完成的 WaitGroup
-	scanButton   *widget.Button               // 扫描按钮
+	schedLogText     = widget.NewMultiLineEntry() // 用于显示日志信息
+	progressBar      *widget.ProgressBarInfinite  // 无限进度条
+	stopChan         chan struct{}                // 用于停止任务的通道
+	wg               sync.WaitGroup               // 用于等待任务完成的 WaitGroup
+	scanButton       *widget.Button               // 扫描按钮
+	orderNumberEntry *widget.Entry                // 用于输入编号的输入框
+	isStopChanClosed bool                         // 通道关闭标志位
 )
 
 // updateUIOnTaskEnd 更新任务结束时的UI状态
@@ -86,8 +88,18 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 								SchedLogToFile(fmt.Sprintf("第 %d 次任务开始...", executionCount+1))
 
+								// 获取输入框中的编号
+								orderNumbers := orderNumberEntry.Text
+
 								SchedLogToFile("开始扫描和复制文件...")
-								err = ScanAndCopyFolders(newConfig)
+								// 打印需要匹配的编号
+								if orderNumbers != "" {
+									SchedLogToFile(fmt.Sprintf("需要匹配的编号: %s", orderNumbers))
+								} else {
+									SchedLogToFile("未输入编号，不进行编号匹配")
+								}
+								// 传递编号给 ScanAndCopyFolders 函数
+								err = ScanAndCopyFolders(newConfig, orderNumbers)
 								if err != nil {
 									SchedLogToFile(fmt.Sprintf("扫描和复制文件失败: %s", err.Error()))
 									updateUIOnTaskEnd()
@@ -143,10 +155,14 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			dialog.ShowConfirm("确认停止", "确定要停止任务吗？", func(confirm bool) {
 				if confirm {
 					SchedLogToFile("正在停止任务...")
-					close(stopChan)
+					if !isStopChanClosed {
+						close(stopChan)
+						isStopChanClosed = true
+					}
 					wg.Wait()
 					updateUIOnTaskEnd()
 					stopChan = make(chan struct{}) // 重置通道
+					isStopChanClosed = false
 				}
 			}, myWindow)
 		}
@@ -156,7 +172,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	dateUI := CreateDateUI(myWindow, config)
 
 	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(17)
+	schedLogText.SetMinRowsVisible(15)
 
 	// 初始化进度条并
 	progressBar = widget.NewProgressBarInfinite()
@@ -164,6 +180,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 初始化停止通道
 	stopChan = make(chan struct{})
+	isStopChanClosed = false
 
 	// 设置按钮和进度条的宽度
 	scanButtonContainer := container.NewGridWrap(fyne.NewSize(300, 35), scanButton) // 增加按钮宽度
@@ -220,6 +237,10 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		saveButton,
 	)
 
+	// 编号输入框
+	orderNumberEntry = widget.NewEntry()
+	orderNumberEntry.SetPlaceHolder("输入编号，逗号分割，处理日期范围内所有文件请留空，勿输入空格")
+
 	// 初始化无限进度条
 	progressBar.Start()
 	time.Sleep(1 * time.Second)
@@ -228,6 +249,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 创建 "任务界面" Tab 内容，将日期 UI 放在文件夹扫描器 UI 之前
 	return container.NewVBox(
 		container.NewBorder(nil, nil, nil, intervalContainer, dateUI), // 将保存配置的 UI 组件布局在日期 UI 的右边
+		orderNumberEntry, // 添加编号输入框容器
 		folderScannerUI,
 		schedLogText,
 	)

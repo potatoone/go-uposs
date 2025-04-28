@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -58,4 +59,29 @@ func copySingleFile(src, dest string) error {
 
 	_, err = io.Copy(destFile, srcFile)
 	return err
+}
+
+// matchFilesByNumbers 根据输入的编号匹配文件名
+// entry 是由中英文逗号分割的多个编号字符串
+// fileNames 是待匹配的文件名列表
+func matchFilesByNumbers(entry string, fileNames []string) []string {
+	// 使用 strings.FieldsFunc 函数根据中英文逗号分割字符串
+	numbers := strings.FieldsFunc(entry, func(r rune) bool {
+		return r == ',' || r == '，'
+	})
+
+	// 存储匹配的文件名
+	matchedFiles := make([]string, 0)
+	for _, fileName := range fileNames {
+		for _, num := range numbers {
+			// 去除编号两端的空白字符
+			num = strings.TrimSpace(num)
+			if num != "" && strings.Contains(fileName, num) {
+				matchedFiles = append(matchedFiles, fileName)
+				break
+			}
+		}
+	}
+
+	return matchedFiles
 }
