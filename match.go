@@ -1,8 +1,6 @@
 package main
 
 import (
-	"io"
-	"os"
 	"strings"
 	"time"
 )
@@ -41,24 +39,6 @@ func isFolderInTimeRange(folderName string, isScheduledTask bool, config *Config
 		}
 		return !folderTime.Before(startDate) && !folderTime.After(endDate)
 	}
-}
-
-// copySingleFile 将单个文件从源路径复制到目标路径
-func copySingleFile(src, dest string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	destFile, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer destFile.Close()
-
-	_, err = io.Copy(destFile, srcFile)
-	return err
 }
 
 // matchFilesByNumbers 根据输入的编号匹配文件名

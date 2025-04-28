@@ -239,7 +239,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 编号输入框
 	orderNumberEntry = widget.NewEntry()
-	orderNumberEntry.SetPlaceHolder("输入编号，逗号分割，处理日期范围内所有文件请留空，勿输入空格")
+	orderNumberEntry.SetPlaceHolder("编号匹配：输入一个或多个编号(逗号分割)，可模糊匹配。处理日期范围内所有文件请留空，勿输入空格")
 
 	// 初始化无限进度条
 	progressBar.Start()
