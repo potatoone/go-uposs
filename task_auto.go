@@ -42,10 +42,10 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		autoStopChan = make(chan struct{})
 
 		// 更新UI状态
-		autoProgressBar.Start()
 		autoScanButton.SetText("停止任务")
 		autoScanButton.Importance = widget.HighImportance
 		autoScanButton.Refresh()
+		autoProgressBar.Start()
 
 		// 记录日志
 		AutoLogToFile("开始自动任务")
@@ -207,18 +207,18 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		progressBarContainer, // 无限进度条
 	)
 
-	// 创建 sched_interval 文本框和保存按钮
-	schedIntervalEntry := widget.NewEntry()
-	schedIntervalEntry.SetText(config.AutoInterval)
+	// 创建 autoInterval 文本框和保存按钮
+	autoIntervalEntry := widget.NewEntry()
+	autoIntervalEntry.SetText(config.AutoInterval)
 
 	// 创建标签
 	intervalLabel := widget.NewLabel("执行间隔:")
 	sLabel := widget.NewLabel("s")
 
 	// 设置输入框的宽度
-	schedIntervalContainer := container.NewHBox(
+	autoIntervalContainer := container.NewHBox(
 		intervalLabel,
-		container.NewGridWrap(fyne.NewSize(150, utils.LEBHeight), schedIntervalEntry),
+		container.NewGridWrap(fyne.NewSize(150, utils.LEBHeight), autoIntervalEntry),
 		sLabel,
 	)
 
@@ -226,14 +226,14 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		dialog.ShowConfirm("确认保存", "确定要保存配置吗？", func(confirm bool) {
 			if confirm {
 				// 验证输入
-				interval, err := strconv.Atoi(schedIntervalEntry.Text)
+				interval, err := strconv.Atoi(autoIntervalEntry.Text)
 				if err != nil || interval <= 0 {
 					dialog.ShowInformation("输入错误", "请输入有效的时间间隔（正整数）", myWindow)
 					return
 				}
 
 				// 更新配置
-				config.AutoInterval = schedIntervalEntry.Text
+				config.AutoInterval = autoIntervalEntry.Text
 
 				// 保存配置 - 直接使用文件名
 				if err := SaveConfig("config.json", config); err != nil {
@@ -250,7 +250,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 
 	// 创建按钮容器，按钮上下排列，并设置按钮的尺寸
 	intervalContainer := container.NewBorder(nil, nil, nil, nil, container.NewHBox(
-		schedIntervalContainer,
+		autoIntervalContainer,
 		saveButtonContainer,
 	))
 
