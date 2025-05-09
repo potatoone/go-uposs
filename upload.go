@@ -76,36 +76,55 @@ func UploadImagesToMinio(client *minio.Client, bucketName, localPath, minioPath 
 		var validOrderNumber string
 		var explicitInvalid bool
 
-		// 遍历每个订单编号，尝试查询 API1
+		// 遍历每个订单编号，尝试查询API1
 		for _, orderNumber := range orderNumbers {
+			// 对每个订单号尝试2次
 			for retry := 0; retry < 2; retry++ {
 				logUploadMessage(fmt.Sprintf("正在向 API1 查询编号: %s (第%d次尝试)", orderNumber, retry+1), isScheduledTask)
 				apiResponse, err := utils.QueryAPI1(api1URL, orderNumber)
+
 				if err != nil {
 					logUploadMessage(fmt.Sprintf("API1 查询失败❌😅: 编号: %s 第%d次尝试 错误: %v", orderNumber, retry+1, err), isScheduledTask)
 					if retry < 1 {
 						logUploadMessage("等待20秒后重试...", isScheduledTask)
 						time.Sleep(20 * time.Second)
 					}
-					continue
+					continue // 重试当前订单号
 				}
+
+				// 检查是否为有效订单
 				if strings.HasPrefix(apiResponse, config.API1Response1) {
 					logUploadMessage(fmt.Sprintf("API1 查询成功，编号: %s 有效, 响应: %s", orderNumber, apiResponse), isScheduledTask)
 					validOrderFound = true
 					validOrderNumber = orderNumber
-					break
+					break // 跳出当前订单号的重试循环
 				}
+
+				// 检查是否为明确无效订单
 				if strings.HasPrefix(apiResponse, config.API1Response2) {
 					logUploadMessage(fmt.Sprintf("API1 查询返回无效状态: 编号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
-					explicitInvalid = true
-					break
+					// 这里不设置explicitInvalid，继续尝试其他订单号
+					break // 跳出当前订单号的重试循环
 				}
-				logUploadMessage(fmt.Sprintf("跳过此文件处理，API1 返回未定义响应: 编号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
-				return nil // 不中断整个流程，仅跳过当前文件
+
+				logUploadMessage(fmt.Sprintf("跳过此订单号，API1 返回未定义响应: 编号: %s, 响应: %s", orderNumber, apiResponse), isScheduledTask)
+				break // 跳出当前订单号的重试循环
 			}
-			if validOrderFound || explicitInvalid {
+
+			// 如果找到有效订单，立即退出整个订单号循环
+			if validOrderFound {
 				break
 			}
+		}
+
+		// 处理所有订单号后的结果判断
+		if validOrderFound {
+			// 处理有效订单的逻辑
+			logUploadMessage(fmt.Sprintf("找到有效订单: %s", validOrderNumber), isScheduledTask)
+		} else {
+			// 所有订单号都无效或未定义的情况
+			logUploadMessage("所有订单号均无效或未定义", isScheduledTask)
+			explicitInvalid = true
 		}
 
 		// 如果没有找到有效的订单编号，且没有明确的无效状态，则跳过此文件
