@@ -99,24 +99,36 @@ func HandleImages(folder, compress, width string, picSize int, isScheduledTask b
 		}
 
 		// 只处理大于等于 picSize KB 的 JPEG、PNG 和 GIF 文件
-		if !info.IsDir() && info.Size() >= int64(picSize*1024) && (strings.HasSuffix(strings.ToLower(info.Name()), ".jpeg") || strings.HasSuffix(strings.ToLower(info.Name()), ".jpg") || strings.HasSuffix(strings.ToLower(info.Name()), ".png") || strings.HasSuffix(strings.ToLower(info.Name()), ".gif")) {
-			// 根据任务类型选择不同的日志记录函数
+		if !info.IsDir() && info.Size() >= int64(picSize*1024) && (strings.HasSuffix(strings.ToLower(info.Name()), ".jpeg") ||
+			strings.HasSuffix(strings.ToLower(info.Name()), ".jpg") ||
+			strings.HasSuffix(strings.ToLower(info.Name()), ".png") ||
+			strings.HasSuffix(strings.ToLower(info.Name()), ".gif")) {
+
+			// 记录开始处理
+			logMsg := fmt.Sprintf("正在处理文件: %s", path)
 			if isScheduledTask {
-				SchedLogToFile(fmt.Sprintf("正在处理文件: %s", path))
+				SchedLogToFile(logMsg)
 			} else {
-				AutoLogToFile(fmt.Sprintf("正在处理文件: %s", path))
+				AutoLogToFile(logMsg)
 			}
 
-			err := CompressImage(path, quality, widthInt)
-			if err != nil {
-				return fmt.Errorf("处理文件 %s 失败: %v", path, err)
+			// 处理图片，如果失败则记录错误并继续
+			if err := CompressImage(path, quality, widthInt); err != nil {
+				errMsg := fmt.Sprintf("处理文件 %s 失败: %v", path, err)
+				if isScheduledTask {
+					SchedLogToFile(errMsg)
+				} else {
+					AutoLogToFile(errMsg)
+				}
+				return nil // 返回 nil 以继续处理下一个文件
 			}
 
-			// 根据任务类型选择不同的日志记录函数
+			// 记录处理完成
+			successMsg := fmt.Sprintf("文件处理完成: %s", path)
 			if isScheduledTask {
-				SchedLogToFile(fmt.Sprintf("文件处理完成: %s", path))
+				SchedLogToFile(successMsg)
 			} else {
-				AutoLogToFile(fmt.Sprintf("文件处理完成: %s", path))
+				AutoLogToFile(successMsg)
 			}
 		}
 
