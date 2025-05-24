@@ -79,11 +79,11 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 
 					err = ScanAndCopyFoldersForToday(newConfig)
 					if err != nil {
-						AutoLogToFile(fmt.Sprintf("扫描和复制文件失败: %s", err.Error()))
-						updateUIOnTaskEnd()
-						return
+						AutoLogToFile(fmt.Sprintf("扫描和复制文件失败❌😅: %s", err.Error()))
+						AutoLogToFile("避免冲突，跳过本次复制...")
+					} else {
+						AutoLogToFile("文件扫描和复制完成")
 					}
-					AutoLogToFile("文件扫描和复制完成")
 
 					// 步骤2: 处理图像
 					AutoLogToFile("开始处理图像...")

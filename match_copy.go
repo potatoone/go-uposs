@@ -32,16 +32,19 @@ func CopyDir(src string, dst string, bufferSize int, isAutoTask bool, dateRange 
 		return fmt.Errorf("读取源目录失败: %v", err)
 	}
 
+	// 检查日期范围
 	for _, entry := range entries {
 		srcPath := filepath.Join(src, entry.Name())
 		dstPath := filepath.Join(dst, entry.Name())
 
+		// 检查是否是目录
 		if entry.IsDir() {
 			err = CopyDir(srcPath, dstPath, bufferSize, isAutoTask, dateRange, orderNumbers)
 			if err != nil {
 				return err
 			}
 		} else {
+			// 非自动任务，检查编号
 			if !isAutoTask && orderNumbers != "" {
 				matchedFiles := matchFilesByNumbers(orderNumbers, []string{entry.Name()})
 				if len(matchedFiles) == 0 {
