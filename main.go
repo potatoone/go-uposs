@@ -129,6 +129,13 @@ func main() {
 	// 创建api配置界面 UI
 	apiconfigUI := createAPIConfigUI(config, myWindow)
 
+	// 程序启动即自动发送 UDP 心跳（无需回包）
+	// 注意：需在 createMonitorUI 之前启动，确保按钮初始状态正确显示"停止心跳"
+	StartHeartbeatLoop(config, nil)
+
+	// 创建监控界面 UI
+	monitorUI := createMonitorUI(config, myWindow)
+
 	// 创建 Tab 内容，并添加内边距
 	autotaskTab := container.NewTabItem("自动任务", container.NewVBox(container.NewPadded(autoTaskUI)))
 	schedTab := container.NewTabItem("计划任务", container.NewVBox(container.NewPadded(schedUI)))
@@ -136,6 +143,7 @@ func main() {
 	configUITab := container.NewTabItem("OSS 配置", container.NewVBox(container.NewPadded(configUI)))
 	picConfigTab := container.NewTabItem("图片配置", container.NewVBox(container.NewPadded(picConfigUI)))
 	apiConfigTab := container.NewTabItem("API配置", container.NewVBox(container.NewPadded(apiconfigUI)))
+	monitorTab := container.NewTabItem("监控", container.NewVBox(container.NewPadded(monitorUI)))
 	aboutTab := container.NewTabItem("关于", container.NewVBox(container.NewPadded(aboutUI)))
 
 	// 创建 Tabs
@@ -146,6 +154,7 @@ func main() {
 		configUITab,
 		picConfigTab,
 		apiConfigTab,
+		monitorTab,
 		aboutTab,
 	)
 

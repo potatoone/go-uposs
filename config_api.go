@@ -75,12 +75,17 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	webhookEntry := widget.NewEntry()
 	webhookEntry.SetText(config.WebhookURL)
 
+	heartbeatURLEntry := widget.NewEntry()
+	heartbeatURLEntry.SetText(config.HeartbeatURL)
+	heartbeatURLEntry.SetPlaceHolder("心跳服务器地址，如 http://192.168.1.100:8080/heartbeat")
+
 	// 创建标签
 	api1Label := widget.NewLabel("API 1:")
 	api2Label := widget.NewLabel("API 2:")
 	api1Response1Label := widget.NewLabel("API1 有效响应:")
 	api1Response2Label := widget.NewLabel("API1 无效响应:")
 	webhookLabel := widget.NewLabel("Webhook URL:")
+	heartbeatURLLabel := widget.NewLabel("心跳地址:")
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
@@ -95,6 +100,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 				config.API1Response1 = api1response1.Text
 				config.API1Response2 = api1response2.Text
 				config.WebhookURL = webhookEntry.Text
+				config.HeartbeatURL = heartbeatURLEntry.Text
 
 				// 假设你有一个 apiLogText 变量表示 API 配置那一栏的日志框
 				if err := SaveConfig("config.json", config); err != nil {
@@ -181,6 +187,11 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), webhookEntry),
 	)
 
+	heartbeatURLContainer := container.NewHBox(
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), heartbeatURLLabel),
+		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), heartbeatURLEntry),
+	)
+
 	// 将保存和测试按钮放在垂直容器中，放在右侧
 	buttonWidth := 150
 	buttonHeight := 32
@@ -213,6 +224,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		api1Response1Container,
 		api1Response2Container,
 		webhookContainer,
+		heartbeatURLContainer,
 	)
 
 	// 创建顶部容器，将输入框容器和右侧按钮容器组合

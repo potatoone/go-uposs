@@ -3,7 +3,7 @@
 
 ## 1.项目介绍
 
-GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处理图片上传至 Minio 对象存储服务的工作流程。该应用提供图形用户界面（GUI），并支持系统托盘功能、自动任务执行、定时任务调度等功能，配置API1查询和API2推送接口，将文件名匹配系统特定编号携带OSS链接推送（接口请求和推送方式固定，需自行修改实现）。
+GO-UPOSS 是一个基于 Go 语言开发的桌面应用程序，主要用于处理图片上传至 Minio 对象存储服务的工作流程。该应用提供图形用户界面（GUI），并支持系统托盘功能、自动任务执行、定时任务调度等功能，配置API1查询和API2推送接口，将文件名匹配系统特定编号携带OSS链接推送（接口请求和推送方式固定，需自行修改实现）。同时内置系统监控功能，实时采集主机 CPU、内存、磁盘信息，并通过 UDP 心跳上报服务器。
 
 API2-test 测试用例，本地运行 python api2_test_server.py 
 API2地址：http://localhost:3001
@@ -41,6 +41,12 @@ API2地址：http://localhost:3001
 6. **部署与分发**
    * 使用 Fyne 的打包工具生成独立可执行文件
    * 支持 Windows 平台，提供图标和应用程序标识
+7. **系统监控（心跳）**
+   * 实时采集主机 CPU 使用率、内存、磁盘信息
+   * 程序启动即自动发送 UDP 心跳（无需回包）
+   * 心跳地址和间隔可配置，间隔默认 60 秒
+   * 心跳日志仅在软件界面显示（最多 10 条），不写入文件日志
+   * 手动停止后，下次重新启动仍会自动发送心跳
 
 ### **技术栈**
 
@@ -85,6 +91,13 @@ API2地址：http://localhost:3001
 * 定期清理日志文件，避免占用过多磁盘空间
 * 清理数据库中的历史记录，优化性能
 
+### **系统监控**
+
+* 通过 Windows API（GetSystemTimes、GlobalMemoryStatusEx、GetDiskFreeSpaceExW）采集 CPU、内存、磁盘信息
+* 程序启动即自动启动 UDP 心跳，无需回包，fire-and-forget 模式
+* 心跳数据以 JSON 格式发送，包含机器码、时间戳、CPU、内存、磁盘信息
+* 心跳地址支持自动补全协议前缀（本地地址自动使用 http://）
+
 
 ## **3.项目结构**
 
@@ -112,6 +125,8 @@ go-uposs/
 
 ├── about.go                   # 关于页面和其他设置
 
+├── monitor.go                 # 系统监控&心跳功能
+
 ├── logger.go                  # 日志记录功能
 
 ├── date.go                     # 日期UI组件
@@ -127,6 +142,8 @@ go-uposs/
 │   ├── port.go                # 端口监听
 
 │   ├── divide.go             # 文件名切割
+
+│   ├── sysinfo.go            # 系统信息采集&心跳发送
 
 │   └── autostart.go        # 开机自启动功能
 
@@ -176,7 +193,21 @@ csdn安装参考 <https://blog.csdn.net/iamhuanyu/article/details/129670053>
 安装 Fyne 库 `go get fyne.io/fyne/v2` `go get fyne.io/fyne/v2/dialog`
 
 ### 运行调试
-go run main.go minio_client.go logger.go about.go clean.go config.go config_api.go config_oss.go config_folder.go config_pic.go date.go task_auto.go task_sched.go pic_handle.go match_copy.go upload.go webhook.go match.go
+go run main.go minio_client.go logger.go about.go clean.go config.go config_api.go config_oss.go config_folder.go config_pic.go date.go task_auto.go task_sched.go pic_handle.go match_copy.go upload.go webhook.go match.go monitor.go
+
+### 系统监控配置
+
+配置文件（data/config.json）中的心跳相关字段：
+
+```json
+"heartbeat_url": "127.0.0.1:2200",   // 心跳服务器地址（UDP），支持自动补全 http:// 前缀
+"heartbeat_interval": "60"            // 心跳间隔（秒），默认 60
+```
+
+* 程序启动即自动发送 UDP 心跳（无需回包，fire-and-forget）
+* 手动停止后，下一次重新启动依然自动发送心跳
+* 心跳日志仅在软件「监控」Tab 界面显示（最多 10 条），不写入文件日志
+* 心跳 JSON 格式：`{"machine_code": "...", "timestamp": "...", "cpu": {...}, "memory": {...}, "disks": [...]}`
 
 ### 打包EXE
 

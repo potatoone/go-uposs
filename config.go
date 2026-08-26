@@ -41,6 +41,11 @@ type Config struct {
 	API1Response2 string `json:"api1_response2"` // API1 编号查询无效响应
 	WebhookURL    string `json:"webhook_url"`    // 企业微信Webhook URL
 
+	// HeartbeatURL 心跳服务器地址
+	HeartbeatURL string `json:"heartbeat_url"`
+	// HeartbeatInterval 心跳间隔（秒）
+	HeartbeatInterval string `json:"heartbeat_interval"`
+
 	CleanStartTime string `json:"cleaStartTime"`
 	CleanEndTime   string `json:"cleanEndTime"`
 

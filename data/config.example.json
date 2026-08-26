@@ -21,6 +21,8 @@
   "api1_response1": "API1 编号查询有效响应",
   "api1_response2": "API1 编号查询无效响应",
   "webhook_url": "企业微信机器人webhook地址",
+  "heartbeat_url": "127.0.0.1:2200",
+  "heartbeat_interval": "60",
   "cleaStartTime": "2025.01.01",
   "cleanEndTime": "2025.03.17",
   "autostart": "false",
