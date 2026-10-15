@@ -278,18 +278,23 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		updateTimeLabel,
 	)
 
-	// 心跳配置区
+	// 心跳配置区：输入框拉伸铺满剩余宽度
 	labelWidth := 100
-	entryWidth := 360
 
-	heartbeatURLContainer := container.NewHBox(
+	heartbeatURLContainer := container.NewBorder(
+		nil,
+		nil,
 		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), widget.NewLabel("心跳地址:")),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), heartbeatURLEntry),
+		nil,
+		heartbeatURLEntry,
 	)
 
-	heartbeatIntervalContainer := container.NewHBox(
+	heartbeatIntervalContainer := container.NewBorder(
+		nil,
+		nil,
 		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), widget.NewLabel("心跳间隔(秒):")),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), heartbeatIntervalEntry),
+		nil,
+		heartbeatIntervalEntry,
 	)
 
 	// 按钮区
@@ -314,26 +319,31 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		heartbeatConfigBox,
 	)
 
-	// 系统信息卡片
-	sysInfoCard := container.NewVBox(
+	// 系统信息卡片：内容铺满整块卡片
+	sysInfoCard := container.NewBorder(
 		widget.NewLabelWithStyle("系统信息", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		nil, nil, nil,
 		sysInfoText,
 	)
 
-	// 心跳日志卡片
-	heartbeatLogCard := container.NewVBox(
+	// 心跳日志卡片：内容铺满整块卡片
+	heartbeatLogCard := container.NewBorder(
 		widget.NewLabelWithStyle("心跳日志", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		nil, nil, nil,
 		heartbeatLogText,
 	)
 
-	// 合并布局：左列系统信息，右列心跳配置+日志
-	leftColumn := container.NewVBox(
-		container.NewPadded(sysInfoCard),
-	)
+	// 合并布局：左列系统信息，右列心跳配置+日志，左右两侧内容均铺满整页高度
+	leftColumn := container.NewPadded(sysInfoCard)
 
-	rightColumn := container.NewVBox(
-		container.NewPadded(heartbeatConfigCard),
-		container.NewPadded(heartbeatLogCard),
+	heartbeatConfigPadded := container.NewPadded(heartbeatConfigCard)
+
+	rightColumn := container.NewBorder(
+		heartbeatConfigPadded,                   // top
+		container.NewPadded(heartbeatLogCard),   // bottom
+		nil,                                     // left
+		nil,                                     // right
+		nil,                                     // center
 	)
 
 	mainContent := container.NewHSplit(leftColumn, rightColumn)
@@ -350,5 +360,6 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 界面加载时自动刷新一次系统信息
 	refreshSysInfo()
 
-	return monitorUI
+	// 使用内边距包裹，左右两列内容铺满整页
+	return container.NewPadded(monitorUI)
 }

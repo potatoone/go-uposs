@@ -14,6 +14,9 @@ import (
 var (
 	db   *sql.DB
 	once sync.Once
+
+	// dbMutex 串行化数据库访问，避免并发复制/压缩时出现 database is locked
+	dbMutex sync.Mutex
 )
 
 // DBConfig 数据库配置
@@ -82,6 +85,9 @@ func createTables() error {
 
 // CheckFileExists 检查文件是否已经复制过
 func CheckFileExists(fileName string, isAutotask bool) (bool, error) {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM copy_records WHERE file_name =?", fileName).Scan(&count)
 	if err != nil {
@@ -93,12 +99,18 @@ func CheckFileExists(fileName string, isAutotask bool) (bool, error) {
 
 // DeleteFileCopyRecord 删除文件复制记录
 func DeleteFileCopyRecord(fileName string, isAutotask bool) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	_, err := db.Exec("DELETE FROM copy_records WHERE file_name =?", fileName)
 	return err
 }
 
 // RecordFileCopy 记录文件复制操作
 func RecordFileCopy(fileName string, copyDir string, isAutoTask bool) error {
+	dbMutex.Lock()
+	defer dbMutex.Unlock()
+
 	_, err := db.Exec(
 		`INSERT OR REPLACE INTO copy_records (file_name, copy_dir, copy_time) 
         VALUES (?, ?, ?)`,

@@ -107,7 +107,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 					time.Sleep(500 * time.Millisecond)
 
 					SchedLogToFile("开始处理图像...")
-					err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, true)
+					err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, newConfig.CompressConcurrency, true)
 					if err != nil {
 						SchedLogToFile(fmt.Sprintf("处理图像失败: %s", err.Error()))
 					} else {

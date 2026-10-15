@@ -57,6 +57,13 @@ func FormatAPITestResult(statusCode int, duration time.Duration) string {
 	}
 }
 
+// apilabeledEntry 创建标签与输入框并排的组件，输入框自动拉伸铺满剩余宽度
+func apilabeledEntry(label *widget.Label, entry *widget.Entry, labelWidth float32) fyne.CanvasObject {
+	labelContainer := container.NewGridWrap(fyne.NewSize(labelWidth, utils.LEBHeight), label)
+
+	return container.NewBorder(nil, nil, labelContainer, nil, entry)
+}
+
 // 创建 API 配置 UI
 func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 创建 api1 和 api2 输入框
@@ -89,7 +96,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建日志输出框
 	apiLogText := widget.NewMultiLineEntry()
-	apiLogText.SetMinRowsVisible(13)
+	apiLogText.SetMinRowsVisible(8)
 
 	// 创建保存按钮
 	saveButton := widget.NewButton("保存配置", func() {
@@ -157,40 +164,21 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		}()
 	})
 
-	// 设置标签和输入框的宽度
-	labelWidth := 120
-	entryWidth := 460 // 减小输入框宽度，为右侧按钮腾出空间
+	// 设置标签宽度
+	labelWidth := float32(120)
 
-	// 创建输入框的容器
-	api1Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1Entry),
-	)
+	// 创建输入框的容器，输入框拉伸铺满剩余宽度
+	api1Container := apilabeledEntry(api1Label, api1Entry, labelWidth)
 
-	api2Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api2Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api2Entry),
-	)
+	api2Container := apilabeledEntry(api2Label, api2Entry, labelWidth)
 
-	api1Response1Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Response1Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1response1),
-	)
+	api1Response1Container := apilabeledEntry(api1Response1Label, api1response1, labelWidth)
 
-	api1Response2Container := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), api1Response2Label),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), api1response2),
-	)
+	api1Response2Container := apilabeledEntry(api1Response2Label, api1response2, labelWidth)
 
-	webhookContainer := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), webhookLabel),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), webhookEntry),
-	)
+	webhookContainer := apilabeledEntry(webhookLabel, webhookEntry, labelWidth)
 
-	heartbeatURLContainer := container.NewHBox(
-		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), heartbeatURLLabel),
-		container.NewGridWrap(fyne.NewSize(float32(entryWidth), utils.LEBHeight), heartbeatURLEntry),
-	)
+	heartbeatURLContainer := apilabeledEntry(heartbeatURLLabel, heartbeatURLEntry, labelWidth)
 
 	// 将保存和测试按钮放在垂直容器中，放在右侧
 	buttonWidth := 150
@@ -236,7 +224,7 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		inputsContainer,
 	)
 
-	// 创建 API 配置 UI 布局
+	// 创建 API 配置 UI 布局：日志文本框在下方，铺满剩余的整页空间
 	apiConfigUI := container.NewBorder(
 		topContainer, // top
 		nil,          // bottom
@@ -245,5 +233,6 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		apiLogText,   // center
 	)
 
-	return apiConfigUI
+	// 使用内边距包裹，避免底部出现多余空白
+	return container.NewPadded(apiConfigUI)
 }

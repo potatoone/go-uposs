@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"go-uposs/utils" // 导入 utils 包
 )
+
+// maxFileConcurrency 复制、压缩、上传文件时允许的最大并发数量
+const maxFileConcurrency = 32
 
 // Config 配置结构体
 type Config struct {
@@ -57,6 +61,49 @@ type Config struct {
 
 	// LockUI 是否锁定界面
 	LockUI string `json:"lockui"`
+
+	// CPUThreads 程序可占用的 CPU 线程数，超出 CPU 逻辑核心数时按逻辑核心数处理
+	CPUThreads int `json:"cpu_threads"`
+
+	// CopyConcurrency 批量复制文件的并发数量上限
+	CopyConcurrency int `json:"copy_concurrency"`
+
+	// CompressConcurrency 批量压缩文件的并发数量上限
+	CompressConcurrency int `json:"compress_concurrency"`
+
+	// UploadConcurrency 批量上传文件的并发数量上限
+	UploadConcurrency int `json:"upload_concurrency"`
+}
+
+// normalizeFileConcurrency 将文件并发数限制在 1 到 maxFileConcurrency 之间
+func normalizeFileConcurrency(concurrency int) int {
+	if concurrency < 1 {
+		return 1
+	}
+	if concurrency > maxFileConcurrency {
+		return maxFileConcurrency
+	}
+	return concurrency
+}
+
+// NormalizePerformanceConfig 校正 CPU 线程数、文件并发数，并填充默认值
+// 默认值：CPU 线程数取 CPU 逻辑核心数，复制/压缩/上传并发数均取 1（与历史串行行为一致）
+func (config *Config) NormalizePerformanceConfig() {
+	cpuCores := runtime.NumCPU()
+
+	if config.CPUThreads <= 0 || config.CPUThreads > cpuCores {
+		config.CPUThreads = cpuCores
+	}
+
+	config.CopyConcurrency = normalizeFileConcurrency(config.CopyConcurrency)
+	config.CompressConcurrency = normalizeFileConcurrency(config.CompressConcurrency)
+	config.UploadConcurrency = normalizeFileConcurrency(config.UploadConcurrency)
+}
+
+// ApplyRuntimeLimits 将 CPU 线程占用配置应用到 Go 运行时
+func (config *Config) ApplyRuntimeLimits() {
+	config.NormalizePerformanceConfig()
+	runtime.GOMAXPROCS(config.CPUThreads)
 }
 
 // LoadConfig 从文件加载配置
@@ -78,6 +125,9 @@ func LoadConfig(filename string) (*Config, error) {
 	// 将缓冲区大小从KB转换为字节
 	config.IOBuffer *= 1024
 
+	// 校正新增的并发配置，未配置时使用默认值
+	config.NormalizePerformanceConfig()
+
 	return config, nil
 }
 
@@ -88,6 +138,9 @@ func SaveConfig(filename string, config *Config) error {
 
 	// 将缓冲区大小从字节转换为KB
 	config.IOBuffer /= 1024
+
+	// 校正并发配置，避免写入非法值
+	config.NormalizePerformanceConfig()
 
 	data, err := json.MarshalIndent(config, "", "  ") // 美化 JSON
 	if err != nil {

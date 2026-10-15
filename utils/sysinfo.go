@@ -9,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -470,4 +471,128 @@ func SendHeartbeatUDP(serverAddr, machineCode string, info *SystemInfo) error {
 		return fmt.Errorf("UDP发送失败: %v", err)
 	}
 	return nil
+}
+
+// ==================== 本程序资源占用 ====================
+
+// ProcessUsage 本程序资源占用
+type ProcessUsage struct {
+	CPUPercent  float64 `json:"cpu_percent"`  // CPU 占用（按逻辑核心归一化，0-100）
+	MemoryBytes uint64  `json:"memory_bytes"` // 物理内存占用（工作集，字节）
+	GoVersion   string  `json:"go_version"`   // 运行环境 Go 版本
+}
+
+var (
+	psapi = syscall.NewLazyDLL("psapi.dll")
+
+	procGetCurrentProcess    = kernel32.NewProc("GetCurrentProcess")
+	procGetProcessTimes      = kernel32.NewProc("GetProcessTimes")
+	procGetProcessMemoryInfo = psapi.NewProc("GetProcessMemoryInfo")
+
+	processUsageOnce sync.Once
+	processUsageMu   sync.RWMutex
+	processUsageSnap = ProcessUsage{GoVersion: runtime.Version()}
+)
+
+// processMemoryCounters Windows PROCESS_MEMORY_COUNTERS 结构
+type processMemoryCounters struct {
+	CB                         uint32
+	PageFaultCount             uint32
+	PeakWorkingSetSize         uintptr
+	WorkingSetSize             uintptr
+	QuotaPeakPagedPoolUsage    uintptr
+	QuotaPagedPoolUsage        uintptr
+	QuotaPeakNonPagedPoolUsage uintptr
+	QuotaNonPagedPoolUsage     uintptr
+	PagefileUsage              uintptr
+	PeakPagefileUsage          uintptr
+}
+
+// StartProcessUsageSampler 启动本程序 CPU/内存占用采样，重复调用只会启动一次
+// interval 为采样间隔，小于等于 0 时按 2 秒处理
+func StartProcessUsageSampler(interval time.Duration) {
+	if interval <= 0 {
+		interval = 2 * time.Second
+	}
+
+	processUsageOnce.Do(func() {
+		go func() {
+			// 先取一次内存占用，避免界面刚打开时显示为 0
+			processUsageMu.Lock()
+			processUsageSnap.MemoryBytes = processWorkingSet()
+			processUsageMu.Unlock()
+
+			prevCPU, prevAt := processCPUTime(), time.Now()
+
+			for {
+				time.Sleep(interval)
+
+				now := time.Now()
+				cpuTime := processCPUTime()
+				elapsed := now.Sub(prevAt).Seconds()
+
+				percent := 0.0
+				if elapsed > 0 && cpuTime > prevCPU {
+					// FILETIME 单位为 100 纳秒，除以 1e7 得到秒数，再按逻辑核心数归一化
+					percent = float64(cpuTime-prevCPU) / 1e7 / elapsed / float64(runtime.NumCPU()) * 100
+				}
+				if percent < 0 {
+					percent = 0
+				}
+				if percent > 100 {
+					percent = 100
+				}
+				prevCPU, prevAt = cpuTime, now
+
+				processUsageMu.Lock()
+				processUsageSnap.CPUPercent = percent
+				processUsageSnap.MemoryBytes = processWorkingSet()
+				processUsageSnap.GoVersion = runtime.Version()
+				processUsageMu.Unlock()
+			}
+		}()
+	})
+}
+
+// GetProcessUsage 读取最近一次采样的本程序资源占用
+func GetProcessUsage() ProcessUsage {
+	processUsageMu.RLock()
+	defer processUsageMu.RUnlock()
+
+	usage := processUsageSnap
+	usage.GoVersion = runtime.Version()
+	return usage
+}
+
+// processCPUTime 获取本程序累计占用的 CPU 时间（100 纳秒）
+func processCPUTime() uint64 {
+	var creation, exit, kernel, user filetime
+
+	handle, _, _ := procGetCurrentProcess.Call()
+	ret, _, _ := procGetProcessTimes.Call(handle,
+		uintptr(unsafe.Pointer(&creation)),
+		uintptr(unsafe.Pointer(&exit)),
+		uintptr(unsafe.Pointer(&kernel)),
+		uintptr(unsafe.Pointer(&user)))
+	if ret == 0 {
+		return 0
+	}
+
+	return uint64(filetimeToInt64(kernel) + filetimeToInt64(user))
+}
+
+// processWorkingSet 获取本程序当前占用的物理内存（工作集，字节）
+func processWorkingSet() uint64 {
+	var counters processMemoryCounters
+	counters.CB = uint32(unsafe.Sizeof(counters))
+
+	handle, _, _ := procGetCurrentProcess.Call()
+	ret, _, _ := procGetProcessMemoryInfo.Call(handle,
+		uintptr(unsafe.Pointer(&counters)),
+		uintptr(counters.CB))
+	if ret == 0 {
+		return 0
+	}
+
+	return uint64(counters.WorkingSetSize)
 }

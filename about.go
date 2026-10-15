@@ -298,7 +298,7 @@ func createAboutUI(win fyne.Window) fyne.CanvasObject {
 	)
 
 	aboutCard := widget.NewCard(
-		"版本 v1.8.5",
+		"版本 v1.9.0",
 		"应用功能：复制、压缩指定路径的图片，上传至 Minio，根据文件名查询API1，将文件 OSS 链接推送至 API2",
 		container.NewVBox(
 			authorContainer, // 使用放在一行的作者信息
@@ -309,8 +309,27 @@ func createAboutUI(win fyne.Window) fyne.CanvasObject {
 
 	cleanSettingsCard := createCleanSettingsUI(win)
 
+	// 本程序资源占用（CPU/内存）与 Go 版本，每 2 秒刷新一次
+	usageLabel := widget.NewLabel(formatProcessUsage(utils.GetProcessUsage()))
+	utils.StartProcessUsageSampler(2 * time.Second)
+
+	go func() {
+		for range time.Tick(2 * time.Second) {
+			fyne.Do(func() {
+				usageLabel.SetText(formatProcessUsage(utils.GetProcessUsage()))
+			})
+		}
+	}()
+
 	return container.NewVBox(
 		cleanSettingsCard,
 		aboutCard,
+		container.NewHBox(usageLabel),
 	)
+}
+
+// formatProcessUsage 格式化本程序资源占用信息
+func formatProcessUsage(usage utils.ProcessUsage) string {
+	return fmt.Sprintf("CPU: %.1f%%    内存: %.1f MB    Go 版本: %s",
+		usage.CPUPercent, float64(usage.MemoryBytes)/(1024*1024), usage.GoVersion)
 }

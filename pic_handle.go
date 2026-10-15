@@ -11,9 +11,20 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/nfnt/resize"
 )
+
+// isSupportedImage 判断文件扩展名是否为支持的图片格式
+func isSupportedImage(fileName string) bool {
+	switch strings.ToLower(filepath.Ext(fileName)) {
+	case ".jpeg", ".jpg", ".png", ".gif":
+		return true
+	default:
+		return false
+	}
+}
 
 // CompressImage 根据配置压缩图像
 func CompressImage(srcPath string, quality, width int) error {
@@ -77,8 +88,8 @@ func CompressImage(srcPath string, quality, width int) error {
 	return nil
 }
 
-// HandleImages 处理 local_folder 下的所有图像文件
-func HandleImages(folder, compress, width string, picSize int, isScheduledTask bool) error {
+// HandleImages 处理 local_folder 下的所有图像文件，按 concurrency 限制同时处理的文件数量
+func HandleImages(folder, compress, width string, picSize int, concurrency int, isScheduledTask bool) error {
 	quality, err := strconv.Atoi(compress)
 	if err != nil {
 		return fmt.Errorf("压缩比率转换失败: %v", err)
@@ -93,16 +104,16 @@ func HandleImages(folder, compress, width string, picSize int, isScheduledTask b
 		return fmt.Errorf("宽度配置转换失败: %v", err)
 	}
 
-	return filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+	limiter := newFileConcurrencyLimiter(concurrency)
+	var wg sync.WaitGroup
+
+	err = filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// 只处理大于等于 picSize KB 的 JPEG、PNG 和 GIF 文件
-		if !info.IsDir() && info.Size() >= int64(picSize*1024) && (strings.HasSuffix(strings.ToLower(info.Name()), ".jpeg") ||
-			strings.HasSuffix(strings.ToLower(info.Name()), ".jpg") ||
-			strings.HasSuffix(strings.ToLower(info.Name()), ".png") ||
-			strings.HasSuffix(strings.ToLower(info.Name()), ".gif")) {
+		if !info.IsDir() && info.Size() >= int64(picSize*1024) && isSupportedImage(info.Name()) {
 
 			// 记录开始处理
 			logMsg := fmt.Sprintf("正在处理文件: %s", path)
@@ -112,26 +123,38 @@ func HandleImages(folder, compress, width string, picSize int, isScheduledTask b
 				AutoLogToFile(logMsg)
 			}
 
-			// 处理图片，如果失败则记录错误并继续
-			if err := CompressImage(path, quality, widthInt); err != nil {
-				errMsg := fmt.Sprintf("处理文件 %s 失败: %v", path, err)
-				if isScheduledTask {
-					SchedLogToFile(errMsg)
-				} else {
-					AutoLogToFile(errMsg)
-				}
-				return nil // 返回 nil 以继续处理下一个文件
-			}
+			wg.Add(1)
+			limiter.acquire() // 占用一个文件并发名额
+			go func(path string) {
+				defer wg.Done()
+				defer limiter.release()
 
-			// 记录处理完成
-			successMsg := fmt.Sprintf("文件处理完成: %s", path)
-			if isScheduledTask {
-				SchedLogToFile(successMsg)
-			} else {
-				AutoLogToFile(successMsg)
-			}
+				// 处理图片，如果失败则记录错误并继续
+				if err := CompressImage(path, quality, widthInt); err != nil {
+					errMsg := fmt.Sprintf("处理文件 %s 失败: %v", path, err)
+					if isScheduledTask {
+						SchedLogToFile(errMsg)
+					} else {
+						AutoLogToFile(errMsg)
+					}
+					return
+				}
+
+				// 记录处理完成
+				successMsg := fmt.Sprintf("文件处理完成: %s", path)
+				if isScheduledTask {
+					SchedLogToFile(successMsg)
+				} else {
+					AutoLogToFile(successMsg)
+				}
+			}(path)
 		}
 
 		return nil
 	})
+
+	// 等待所有已启动的压缩任务结束
+	wg.Wait()
+
+	return err
 }

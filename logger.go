@@ -20,6 +20,9 @@ var (
 
 	// 日志写入互斥锁
 	logMutex sync.Mutex
+
+	// 任务日志写入互斥锁，避免并发处理文件时日志内容交叉
+	taskLogMutex sync.Mutex
 )
 
 // Logger 用于处理日志的记录
@@ -114,6 +117,10 @@ func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string, tas
 	if logger == nil {
 		return fmt.Errorf("日志记录器未初始化")
 	}
+
+	// 串行写入，避免并发任务导致日志内容交叉或文件写入冲突
+	taskLogMutex.Lock()
+	defer taskLogMutex.Unlock()
 
 	// 获取当前日期，并检查是否需要更换日志文件
 	currentDate := time.Now().Format("2006.01.02")
