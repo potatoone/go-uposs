@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 	"io"
 	"os"
 	"path/filepath"

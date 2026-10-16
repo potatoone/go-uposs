@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 	"os"
 	"runtime"
 	"strconv"
@@ -211,14 +211,14 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 		config.RemoteFolder, config.LocalFolder, config.IOBuffer/1024, config.CPUThreads,
 		config.CopyConcurrency, config.CompressConcurrency, config.UploadConcurrency))
 
-	// 使用内边距包裹，日志文本框铺满剩余的整页空间
-	return container.NewPadded(container.NewBorder(
+	// 日志文本框放在 center，铺满页面剩余空间（外层 Tab 已统一添加内边距）
+	return container.NewBorder(
 		inputAndButtonContainer, // top
 		nil,                     // bottom
 		nil,                     // left
 		nil,                     // right
 		folderLogText,           // center
-	))
+	)
 }
 
 // 扫描 remote 目录下的所有文件夹名称

@@ -103,65 +103,93 @@ API2地址：http://localhost:3001
 
 go-uposs/
 
-├── main.go                     # 主程序入口
+├── cmd/
 
-├── config.go                  # 配置文件处理
+│   └── gouposs/                # 主程序（main 包，程序入口 main.go 与全部业务代码）
 
-├── auto.go                     # 自动任务相关功能
+│       ├── main.go             # 主程序入口：初始化、窗口、Tab 组装
 
-├── sched.go                   # 计划任务相关功能
+│       ├── config.go           # 配置结构体与读写、并发/时间同步默认值
 
-├── match_copy.go         # 文件夹&文件复制
+│       ├── config_api.go       # API 配置界面
 
-├── clean.go                    # 清理日志&数据库功能
+│       ├── config_oss.go       # OSS 配置界面
 
-├── api_config.go         # 查询&推送API配置
+│       ├── config_folder.go    # 文件夹配置界面
 
-├── minio_client.go         # Minio客户端
+│       ├── config_pic.go       # 图片配置界面
 
-├── oss_config.go           # OSS配置
+│       ├── task_auto.go        # 自动任务
 
-├── folder_config.go       # 文件夹配置
+│       ├── task_sched.go       # 计划任务
 
-├── about.go                   # 关于页面和其他设置
+│       ├── tasklock.go         # 全局任务锁与可中断等待
 
-├── monitor.go                 # 系统监控&心跳功能
+│       ├── match.go            # 日期/文件夹匹配
 
-├── logger.go                  # 日志记录功能
+│       ├── match_copy.go       # 文件夹与文件复制（支持并发）
 
-├── date.go                     # 日期UI组件
+│       ├── pic_handle.go       # 图片压缩（支持并发）
 
-├── pic_handle.go           # 图片压缩功能
+│       ├── upload.go           # 上传到 MinIO + API1/API2 流程（支持并发）
 
-├── utils/                          # 工具函数
+│       ├── minio_client.go     # MinIO 客户端
 
-│   ├── passwd.go          # 密码验证功能
+│       ├── timesync.go         # 网络时间检测与偏差告警
 
-│   ├── path.go               # 路径处理功能
+│       ├── webhook.go          # 企业微信通知（含发送冷却）
 
-│   ├── port.go                # 端口监听
+│       ├── notify.go           # 通知冷却状态
 
-│   ├── divide.go             # 文件名切割
+│       ├── monitor.go          # 系统监控与心跳
 
-│   ├── sysinfo.go            # 系统信息采集&心跳发送
+│       ├── logger.go           # 日志记录
 
-│   └── autostart.go        # 开机自启动功能
+│       ├── about.go            # 关于页面与其他设置
 
-├── database/                 # 数据库相关
+│       ├── clean.go            # 清理日志与数据库记录
 
-│   ├── queries.go           # 数据库查询
+│       ├── date.go             # 日期选择 UI 组件
 
-│   └── database.go       # 数据库初始化
+│       └── FyneApp.toml        # Fyne 应用元数据（图标、名称、版本）
 
-├── data/                         # 资源文件
+├── internal/
 
-│   ├── icon/                    # 图标文件
+│   └── utils/                  # 内部工具包（仅本项目可导入）
 
-│   └── config.example.json    # 配置文件
+│       ├── passwd.go           # 密码验证
 
-├── go.mod                     # 依赖管理
+│       ├── path.go             # 路径处理
 
-└── go.sum                     # 依赖版本锁定
+│       ├── port.go             # 端口监听
+
+│       ├── divide.go           # 文件名切割
+
+│       ├── sysinfo.go          # 系统信息采集、心跳发送、进程资源占用
+
+│       ├── database.go         # 数据库初始化与复制记录读写
+
+│       ├── api.go              # API1 查询 / API2 推送
+
+│       ├── autostart.go        # 开机自启动
+
+│       ├── theme.go            # 自定义主题（内嵌字体）
+
+│       └── mk.ttf              # 嵌入字体
+
+├── data/                       # 资源文件
+
+│   ├── icon/                   # 图标（icon.ico / icon.png / 生成脚本）
+
+│   └── config.example.json     # 配置示例
+
+├── project/                    # 安装包工程与历史产物
+
+├── build.ps1                   # 构建/打包脚本
+
+├── go.mod                      # 依赖管理
+
+└── go.sum                      # 依赖版本锁定
 
 
 ## 4.开发环境配置
@@ -193,7 +221,8 @@ csdn安装参考 <https://blog.csdn.net/iamhuanyu/article/details/129670053>
 安装 Fyne 库 `go get fyne.io/fyne/v2` `go get fyne.io/fyne/v2/dialog`
 
 ### 运行调试
-go run main.go minio_client.go logger.go about.go clean.go config.go config_api.go config_oss.go config_folder.go config_pic.go date.go task_auto.go task_sched.go pic_handle.go match_copy.go upload.go webhook.go match.go monitor.go
+
+`go run ./cmd/gouposs`
 
 ### 系统监控配置
 
@@ -211,16 +240,28 @@ go run main.go minio_client.go logger.go about.go clean.go config.go config_api.
 
 ### 打包EXE
 
-安装Fyne的命令行工具 
+安装Fyne的命令行工具
 
 `go install fyne.io/fyne/v2/cmd/fyne@latest`
 
-使用-name参数自定义生成的exe
-fyne package -os windows -icon .\data\icon\icon.png -name "GO-UPOSS"
+一键打包（推荐，自动编译并生成 release 版到仓库根目录）：
 
-`fyne package -os windows -icon .\data\icon\icon.ico -name "GO-UPOSS"`
+`.\build.ps1`
 
-打包 Release 程序到根目录 
+仅校验编译不改动产物：
 
-`fyne package -os windows -icon .\data\icon\icon.ico -name "GO-UPOSS" -appID "com.apotato.go-uposs" -release`
+`.\build.ps1 -NoPackage`
+
+手动打包说明：代码位于 `cmd/gouposs`（main 包），Fyne 要求 `FyneApp.toml` 与 main 包同目录，
+因此需先进入该目录再打包，产物会生成在该目录下：
+
+```powershell
+cd cmd\gouposs
+fyne package -os windows -icon ..\..\data\icon\icon.ico -name "GO-UPOSS" -appID "com.apotato.go-uposs" -release
+```
+
+也可在仓库根目录用 `-sourceDir` 指定源码目录：
+
+`fyne package -sourceDir .\cmd\gouposs -os windows -icon .\data\icon\icon.ico -name "GO-UPOSS" -appID "com.apotato.go-uposs" -release`
+
 

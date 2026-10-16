@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils" // 导入 utils 包
+	"go-uposs/internal/utils" // 导入 utils 包
 	"log"
 	"os"
 	"path/filepath"

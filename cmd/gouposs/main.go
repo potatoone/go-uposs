@@ -14,7 +14,7 @@ import (
 	"fyne.io/fyne/v2/widget"
 	"golang.org/x/sys/windows/registry"
 
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 )
 
 // MainLogToFile 将主程序日志写入系统日志
@@ -138,18 +138,21 @@ func main() {
 	// 注意：需在 createMonitorUI 之前启动，确保按钮初始状态正确显示"停止心跳"
 	StartHeartbeatLoop(config, nil)
 
+	// 启动后台时间检测（仅检测偏差并告警，不修改系统时间）
+	StartTimeSyncLoop(config)
+
 	// 创建监控界面 UI
 	monitorUI := createMonitorUI(config, myWindow)
 
-	// 创建 Tab 内容，并添加内边距（部分页面自行处理留白，避免底部出现多余空白）
-	autotaskTab := container.NewTabItem("自动任务", container.NewVBox(container.NewPadded(autoTaskUI)))
-	schedTab := container.NewTabItem("计划任务", container.NewVBox(container.NewPadded(schedUI)))
-	folderConfigTab := container.NewTabItem("文件夹配置", folderConfigUI)
-	configUITab := container.NewTabItem("OSS 配置", container.NewVBox(container.NewPadded(configUI)))
-	picConfigTab := container.NewTabItem("图片配置", container.NewVBox(container.NewPadded(picConfigUI)))
-	apiConfigTab := container.NewTabItem("API配置", apiConfigUI)
-	monitorTab := container.NewTabItem("监控", monitorUI)
-	aboutTab := container.NewTabItem("关于", container.NewVBox(container.NewPadded(aboutUI)))
+	// 创建 Tab 内容，统一包一层相同的内边距，保证各页面留白一致且铺满整页
+	autotaskTab := container.NewTabItem("自动任务", container.NewPadded(autoTaskUI))
+	schedTab := container.NewTabItem("计划任务", container.NewPadded(schedUI))
+	folderConfigTab := container.NewTabItem("文件夹配置", container.NewPadded(folderConfigUI))
+	configUITab := container.NewTabItem("OSS 配置", container.NewPadded(configUI))
+	picConfigTab := container.NewTabItem("图片配置", container.NewPadded(picConfigUI))
+	apiConfigTab := container.NewTabItem("API配置", container.NewPadded(apiConfigUI))
+	monitorTab := container.NewTabItem("监控", container.NewPadded(monitorUI))
+	aboutTab := container.NewTabItem("关于", container.NewPadded(aboutUI))
 
 	// 创建 Tabs
 	tabs := container.NewAppTabs(

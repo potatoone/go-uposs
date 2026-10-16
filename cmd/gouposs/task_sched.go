@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -39,6 +39,14 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 启动自动任务的功能
 	startSchedTask := func() {
+		// 两个任务共用同一条流水线，先抢全局任务锁，避免并发处理同一批文件
+		if owner, ok := tryStartTask(taskKindSched); !ok {
+			message := fmt.Sprintf("「%s」正在运行，请先停止后再启动「%s」", owner, taskKindSched)
+			SchedLogToFile(message)
+			dialog.ShowInformation("任务冲突", message, myWindow)
+			return
+		}
+
 		stopChan = make(chan struct{})
 
 		// 显示无限进度条
@@ -50,6 +58,8 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			// 任务结束（含各类提前 return）时释放全局任务锁
+			defer endTask(taskKindSched)
 
 			// 加载配置，获取最大执行次数
 			newConfig, err := LoadConfig("config.json")
@@ -104,7 +114,10 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 						return
 					}
 					SchedLogToFile("文件扫描和复制完成")
-					time.Sleep(500 * time.Millisecond)
+					if awaitTaskStop(500 * time.Millisecond) {
+						SchedLogToFile("收到停止请求，任务结束")
+						return
+					}
 
 					SchedLogToFile("开始处理图像...")
 					err = HandleImages(newConfig.LocalFolder, newConfig.PicCompress, newConfig.PicWidth, newConfig.PicSize, newConfig.CompressConcurrency, true)
@@ -113,7 +126,10 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 					} else {
 						SchedLogToFile("图像处理完成")
 					}
-					time.Sleep(500 * time.Millisecond)
+					if awaitTaskStop(500 * time.Millisecond) {
+						SchedLogToFile("收到停止请求，任务结束")
+						return
+					}
 
 					SchedLogToFile("开始上传图片到OSS...")
 					err = UploadImagesWithTaskType(newConfig, true)
@@ -122,15 +138,19 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 							SchedLogToFile("无文件可上传")
 						} else {
 							SchedLogToFile(fmt.Sprintf("上传图片失败: %v，\n20 秒后重试一次...", err))
-							time.Sleep(20 * time.Second)
+							if awaitTaskStop(20 * time.Second) {
+								SchedLogToFile("收到停止请求，终止上传重试")
+								return
+							}
 							err = UploadImagesWithTaskType(newConfig, true)
 							if err != nil {
 								SchedLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
-								if notifyErr := newConfig.NotifyUploadFailed(); notifyErr != nil {
+								if notifyErr := newConfig.NotifyUploadFailed(true); notifyErr != nil {
 									SchedLogToFile(fmt.Sprintf("发送企业微信通知: %v", notifyErr))
 								}
 							} else {
 								SchedLogToFile("重试成功，所有图片上传完成")
+								MarkUploadRecovered(true)
 							}
 						}
 					}
@@ -151,8 +171,8 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// 创建日期 UI 组件，并获取 startTimeLabel
 	dateUI := CreateDateUI(myWindow, config)
 
-	// 设置日志文本框
-	schedLogText.SetMinRowsVisible(15)
+	// 设置日志文本框：放在页面 center 铺满剩余空间，仅保留少量最小行数
+	schedLogText.SetMinRowsVisible(5)
 
 	// 初始化进度条并
 	progressBar = widget.NewProgressBarInfinite()
@@ -175,14 +195,24 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 				if confirm {
 					SchedLogToFile("正在停止任务...")
 
+					// 先切换按钮状态，让界面立即有反馈（不再阻塞 UI 线程）
+					scanButton.SetText("正在停止...")
+					scanButton.Disable()
+
+					// 请求停止：任务内的可中断等待会立即返回
+					cancelRunningTask()
+
 					// 关闭停止通道
 					close(stopChan)
 
-					// 等待任务完成
-					wg.Wait()
-
-					// 直接更新UI状态
-					updateUIOnTaskEnd()
+					// 在后台等待任务真正退出，完成后回到主线程更新 UI
+					go func() {
+						wg.Wait()
+						fyne.Do(func() {
+							scanButton.Enable()
+							updateUIOnTaskEnd()
+						})
+					}()
 				}
 			}, myWindow)
 		}
@@ -253,10 +283,16 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	progressBar.Stop()
 
 	// 创建 "任务界面" Tab 内容，将日期 UI 放在文件夹扫描器 UI 之前
-	return container.NewVBox(
-		container.NewBorder(nil, nil, nil, TimesContainer, dateUI), // 将保存配置的 UI 组件布局在日期 UI 的右边
-		orderNumberEntry, // 添加编号输入框容器
-		folderScannerUI,
-		schedLogText,
+	// 日志文本框放在 center，铺满剩余的整页空间
+	return container.NewBorder(
+		container.NewVBox(
+			container.NewBorder(nil, nil, nil, TimesContainer, dateUI), // 将保存配置的 UI 组件布局在日期 UI 的右边
+			orderNumberEntry, // 添加编号输入框容器
+			folderScannerUI,  // 文件夹扫描器 UI
+		), // top
+		nil,          // bottom
+		nil,          // left
+		nil,          // right
+		schedLogText, // center
 	)
 }

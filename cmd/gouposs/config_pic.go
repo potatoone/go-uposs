@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 	"strconv"
 
 	// 添加时间包
@@ -68,8 +68,8 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 
 	// 创建一个日志输出框（多行文本框）
 	picLogText := widget.NewMultiLineEntry()
-	picLogText.SetMinRowsVisible(18) // 设置日志文本框可见行数
-	picLogText.SetText("")           // 确保初始文本为空，没有空行
+	picLogText.SetMinRowsVisible(5) // 设置日志文本框可见行数（页面中会铺满剩余空间）
+	picLogText.SetText("")          // 确保初始文本为空，没有空行
 
 	confirmButton := widget.NewButton("修改参数", func() {
 		// 获取用户输入的宽度
@@ -140,16 +140,24 @@ func createPicConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	SysLogToFile(fmt.Sprintf("[图片配置] 配置已载入，压缩率=%s%%，宽度=%s，过滤大小=%dKB",
 		config.PicCompress, config.PicWidth, config.PicSize))
 
-	// 将控件放到垂直布局中，并将百分比条和按钮放在右边，文本框放在下面
-	return container.NewBorder(
-		nil,        // top
-		picLogText, // bottom
-		nil,        // left
+	// 上方为输入项与进度条/按钮，日志文本框放在 center 铺满剩余的整页空间
+	top := container.NewBorder(
+		nil,
+		nil,
+		nil,
 		container.NewVBox(progress, buttonContainer), // right
 		container.NewVBox(
 			compressBox, // 压缩比率的标签和输入框
 			widthBox,    // 宽度的标签和输入框
 			sizeBox,     // 体积的标签和输入框
-		),
+		), // center
+	)
+
+	return container.NewBorder(
+		top,        // top
+		nil,        // bottom
+		nil,        // left
+		nil,        // right
+		picLogText, // center
 	)
 }

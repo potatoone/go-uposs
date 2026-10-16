@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -71,7 +71,7 @@ func refreshConfig(machineCodeEntry, bucketNameEntry, endpointEntry, publicUrlEn
 // CreateUI 创建 UI 界面
 func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	ossLogText = widget.NewMultiLineEntry()
-	ossLogText.SetMinRowsVisible(11)
+	ossLogText.SetMinRowsVisible(5)
 	ossLogText.SetText("")
 
 	machineCodeEntry := widget.NewEntry()
@@ -135,8 +135,12 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	SysLogToFile(fmt.Sprintf("[OSS配置] 配置已载入，MachineCode=%s, BucketName=%s, Endpoint=%s, UseSSL=%t",
 		config.MachineCode, config.BucketName, config.Endpoint, config.UseSSL))
 
-	return container.NewVBox(
-		mainContainer,
-		ossLogText,
+	// 日志文本框放在 center，铺满剩余的整页空间
+	return container.NewBorder(
+		mainContainer, // top
+		nil,           // bottom
+		nil,           // left
+		nil,           // right
+		ossLogText,    // center
 	)
 }

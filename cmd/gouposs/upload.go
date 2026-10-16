@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 
 	"github.com/minio/minio-go/v7"
 )
@@ -138,7 +138,10 @@ func (ctx *uploadContext) handleFile(path string, info os.FileInfo) {
 				logUploadMessage(fmt.Sprintf("API1 查询失败❌😅: 编号: %s 第%d次尝试 错误: %v", orderNumber, retry+1, err), ctx.isScheduledTask)
 				if retry < 1 {
 					logUploadMessage("等待20秒后重试...", ctx.isScheduledTask)
-					time.Sleep(20 * time.Second)
+					if awaitTaskStop(20 * time.Second) {
+						logUploadMessage("收到停止请求，终止 API1 重试", ctx.isScheduledTask)
+						return
+					}
 				}
 				continue // 重试当前订单号
 			}
@@ -232,7 +235,10 @@ func (ctx *uploadContext) handleFile(path string, info os.FileInfo) {
 			break
 		}
 		if retry == 0 {
-			time.Sleep(20 * time.Second)
+			if awaitTaskStop(20 * time.Second) {
+				logUploadMessage("收到停止请求，终止 API2 重试", ctx.isScheduledTask)
+				return
+			}
 		}
 	}
 	if api2Err != nil {

@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -39,6 +39,14 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 
 	// 启动自动任务的功能
 	startAutoTask := func() {
+		// 两个任务共用同一条流水线，先抢全局任务锁，避免并发处理同一批文件
+		if owner, ok := tryStartTask(taskKindAuto); !ok {
+			message := fmt.Sprintf("「%s」正在运行，请先停止后再启动「%s」", owner, taskKindAuto)
+			AutoLogToFile(message)
+			dialog.ShowInformation("任务冲突", message, myWindow)
+			return
+		}
+
 		autoStopChan = make(chan struct{})
 
 		// 更新UI状态
@@ -53,6 +61,8 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 		autoWg.Add(1)
 		go func() {
 			defer autoWg.Done()
+			// 任务结束（含各类提前 return）时释放全局任务锁
+			defer endTask(taskKindAuto)
 			for {
 				select {
 				case <-autoStopChan:
@@ -104,18 +114,23 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 							AutoLogToFile("无文件可上传")
 						} else {
 							AutoLogToFile(fmt.Sprintf("上传图片失败: %v，\n20 秒后重试一次...", err))
-							time.Sleep(20 * time.Second) // 等待 20 秒再试一次
+							// 等待期间收到停止请求则直接结束本轮
+							if awaitTaskStop(20 * time.Second) {
+								AutoLogToFile("收到停止请求，终止上传重试")
+								return
+							}
 
 							// 再次尝试
 							err = UploadImagesWithTaskType(newConfig, false)
 							if err != nil {
 								AutoLogToFile(fmt.Sprintf("重试仍然失败: %v", err))
-								// 发送企业微信通知
-								if notifyErr := newConfig.NotifyUploadFailed(); notifyErr != nil {
+								// 发送企业微信通知（5 分钟冷却，避免持续故障刷屏）
+								if notifyErr := newConfig.NotifyUploadFailed(false); notifyErr != nil {
 									AutoLogToFile(fmt.Sprintf("发送企业微信通知: %v", notifyErr))
 								}
 							} else {
 								AutoLogToFile("重试成功，所有图片上传完成")
+								MarkUploadRecovered(false)
 							}
 						}
 					}
@@ -156,8 +171,8 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	// 系统时间标签
 	systemTimeLabel := widget.NewLabel("系统时间:")
 
-	// 设置日志文本框
-	autoLogText.SetMinRowsVisible(20)
+	// 设置日志文本框：放在页面 center 铺满剩余空间，仅保留少量最小行数
+	autoLogText.SetMinRowsVisible(5)
 
 	// 初始化进度条
 	autoProgressBar = widget.NewProgressBarInfinite()
@@ -180,14 +195,24 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 				if confirm {
 					AutoLogToFile("正在停止任务...")
 
+					// 先切换按钮状态，让界面立即有反馈（不再阻塞 UI 线程）
+					autoScanButton.SetText("正在停止...")
+					autoScanButton.Disable()
+
+					// 请求停止：任务内的可中断等待会立即返回
+					cancelRunningTask()
+
 					// 关闭停止通道
 					close(autoStopChan)
 
-					// 等待任务完成
-					autoWg.Wait()
-
-					// 直接更新UI状态
-					updateUIOnTaskEnd()
+					// 在后台等待任务真正退出，完成后回到主线程更新 UI
+					go func() {
+						autoWg.Wait()
+						fyne.Do(func() {
+							autoScanButton.Enable()
+							updateUIOnTaskEnd()
+						})
+					}()
 				}
 			}, myWindow)
 		}
@@ -255,10 +280,16 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	))
 
 	// 创建 "任务界面" Tab 内容，将日期 UI 放在文件夹扫描器 UI 之前
-	ui := container.NewVBox(
-		container.NewBorder(nil, nil, nil, intervalContainer, container.NewHBox(systemTimeLabel, timeLabel)), // 系统时间标签、实时时间标签和输入框、保存按钮
-		folderScannerUI,
-		autoLogText,
+	// 日志文本框放在 center，铺满剩余的整页空间
+	ui := container.NewBorder(
+		container.NewVBox(
+			container.NewBorder(nil, nil, nil, intervalContainer, container.NewHBox(systemTimeLabel, timeLabel)), // 系统时间标签、实时时间标签和输入框、保存按钮
+			folderScannerUI,
+		), // top
+		nil,         // bottom
+		nil,         // left
+		nil,         // right
+		autoLogText, // center
 	)
 
 	// 初始化无限进度条并确保其处于停止状态

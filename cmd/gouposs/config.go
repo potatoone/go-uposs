@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"go-uposs/utils" // 导入 utils 包
+	"go-uposs/internal/utils" // 导入 utils 包
 )
 
 // maxFileConcurrency 复制、压缩、上传文件时允许的最大并发数量
@@ -49,6 +49,13 @@ type Config struct {
 	HeartbeatURL string `json:"heartbeat_url"`
 	// HeartbeatInterval 心跳间隔（秒）
 	HeartbeatInterval string `json:"heartbeat_interval"`
+
+	// NTPServer 网络时间服务器地址（用于检测本机时间偏差）
+	NTPServer string `json:"ntp_server"`
+	// NTPInterval 时间检测间隔（秒）
+	NTPInterval string `json:"ntp_interval"`
+	// NTPThreshold 本机时间偏差告警阈值（秒）
+	NTPThreshold string `json:"ntp_threshold"`
 
 	CleanStartTime string `json:"cleaStartTime"`
 	CleanEndTime   string `json:"cleanEndTime"`
@@ -127,6 +134,9 @@ func LoadConfig(filename string) (*Config, error) {
 
 	// 校正新增的并发配置，未配置时使用默认值
 	config.NormalizePerformanceConfig()
+
+	// 校正时间同步配置，未配置时使用默认值
+	config.NormalizeTimeSyncConfig()
 
 	return config, nil
 }

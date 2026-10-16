@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -169,7 +169,7 @@ func (h *heartbeatState) stop() {
 func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// ---------- 系统信息显示 ----------
 	sysInfoText := widget.NewMultiLineEntry()
-	sysInfoText.SetMinRowsVisible(14)
+	sysInfoText.SetMinRowsVisible(11)
 	sysInfoText.Disable() // 只读
 
 	// 采集时间标签
@@ -201,9 +201,79 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	heartbeatIntervalEntry.SetText(config.HeartbeatInterval)
 	heartbeatIntervalEntry.SetPlaceHolder("心跳间隔（秒）")
 
+	// ---------- 时间同步 ----------
+	ntpServerEntry := widget.NewEntry()
+	ntpServerEntry.SetText(config.NTPServer)
+	ntpServerEntry.SetPlaceHolder("NTP 服务器，如 ntp.aliyun.com")
+
+	ntpIntervalEntry := widget.NewEntry()
+	ntpIntervalEntry.SetText(config.NTPInterval)
+	ntpIntervalEntry.SetPlaceHolder("检测间隔（秒）")
+
+	ntpThresholdEntry := widget.NewEntry()
+	ntpThresholdEntry.SetText(config.NTPThreshold)
+	ntpThresholdEntry.SetPlaceHolder("偏差告警阈值（秒）")
+
+	// 时间同步状态标签：显示最近一次检测的网络时间与偏差
+	timeSyncStatusLabel := widget.NewLabel("尚未检测")
+	timeSyncStatusLabel.Wrapping = fyne.TextWrapWord
+
+	globalTimeSync.mu.Lock()
+	globalTimeSync.statusLabel = timeSyncStatusLabel
+	globalTimeSync.mu.Unlock()
+
+	// 若启动时已完成检测，直接显示结果
+	if last, err := GetLastTimeSync(); !last.CheckedAt.IsZero() {
+		if err != nil {
+			timeSyncStatusLabel.SetText(fmt.Sprintf("检测失败: %v", err))
+		} else {
+			timeSyncStatusLabel.SetText(fmt.Sprintf("网络时间 %s　本机偏差 %+.3f 秒",
+				last.RemoteTime.Format("15:04:05"), last.Offset.Seconds()))
+		}
+	}
+
+	// 保存时间同步配置
+	saveTimeSyncConfig := func() bool {
+		intervalSec, err := strconv.Atoi(ntpIntervalEntry.Text)
+		if err != nil || intervalSec <= 0 {
+			logHeartbeat("检测间隔无效，请填写正整数（秒）")
+			return false
+		}
+		thresholdSec, err := strconv.Atoi(ntpThresholdEntry.Text)
+		if err != nil || thresholdSec <= 0 {
+			logHeartbeat("偏差告警阈值无效，请填写正整数（秒）")
+			return false
+		}
+		if ntpServerEntry.Text == "" {
+			logHeartbeat("请先填写 NTP 服务器地址")
+			return false
+		}
+
+		config.NTPServer = ntpServerEntry.Text
+		config.NTPInterval = ntpIntervalEntry.Text
+		config.NTPThreshold = ntpThresholdEntry.Text
+		if err := SaveConfig("config.json", config); err != nil {
+			logHeartbeat(fmt.Sprintf("保存时间同步配置失败: %v", err))
+			return false
+		}
+		logHeartbeat("时间同步配置已保存")
+		return true
+	}
+
+	// 立即检测一次网络时间
+	checkTimeNow := func() {
+		if ntpServerEntry.Text == "" {
+			logHeartbeat("请先填写 NTP 服务器地址")
+			return
+		}
+		config.NTPServer = ntpServerEntry.Text
+		logHeartbeat(fmt.Sprintf("正在向 %s 查询网络时间...", config.NTPServer))
+		go checkTimeOnce(config)
+	}
+
 	// ---------- 心跳日志 ----------
 	heartbeatLogText := widget.NewMultiLineEntry()
-	heartbeatLogText.SetMinRowsVisible(8)
+	heartbeatLogText.SetMinRowsVisible(5)
 
 	// 关联 UI 日志框到全局心跳日志
 	monitorLogEntry = heartbeatLogText
@@ -313,6 +383,52 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		heartbeatButtons,
 	)
 
+	// 时间同步配置区
+	ntpServerContainer := container.NewBorder(
+		nil,
+		nil,
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), widget.NewLabel("NTP 服务器:")),
+		nil,
+		ntpServerEntry,
+	)
+
+	ntpIntervalContainer := container.NewBorder(
+		nil,
+		nil,
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), widget.NewLabel("检测间隔(秒):")),
+		nil,
+		ntpIntervalEntry,
+	)
+
+	ntpThresholdContainer := container.NewBorder(
+		nil,
+		nil,
+		container.NewGridWrap(fyne.NewSize(float32(labelWidth), utils.LEBHeight), widget.NewLabel("偏差阈值(秒):")),
+		nil,
+		ntpThresholdEntry,
+	)
+
+	saveNTPBtn := widget.NewButton("保存配置", func() {
+		if saveTimeSyncConfig() {
+			timeSyncStatusLabel.SetText("配置已保存，下一轮检测生效")
+		}
+	})
+	checkNTPBtn := widget.NewButton("立即检测", func() {
+		if saveTimeSyncConfig() {
+			checkTimeNow()
+		}
+	})
+
+	timeSyncButtons := container.NewHBox(checkNTPBtn, saveNTPBtn)
+
+	timeSyncBox := container.NewVBox(
+		timeSyncStatusLabel, // 网络时间与偏差放在第一行
+		ntpServerContainer,
+		ntpIntervalContainer,
+		ntpThresholdContainer,
+		timeSyncButtons,
+	)
+
 	// 心跳配置卡片
 	heartbeatConfigCard := container.NewVBox(
 		widget.NewLabelWithStyle("心跳配置", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -326,6 +442,12 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		sysInfoText,
 	)
 
+	// 时间同步卡片
+	timeSyncCard := container.NewVBox(
+		widget.NewLabelWithStyle("时间同步（仅检测，不修改系统时间）", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
+		timeSyncBox,
+	)
+
 	// 心跳日志卡片：内容铺满整块卡片
 	heartbeatLogCard := container.NewBorder(
 		widget.NewLabelWithStyle("心跳日志", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
@@ -333,33 +455,24 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		heartbeatLogText,
 	)
 
-	// 合并布局：左列系统信息，右列心跳配置+日志，左右两侧内容均铺满整页高度
-	leftColumn := container.NewPadded(sysInfoCard)
+	// 合并布局：左列两个文本框（上=系统信息、下=心跳日志），右列两个配置（上=心跳配置、下=时间同步）
+	// 使用等宽网格（无分隔条、不可拖动），宽度固定为各占一半；左右两列高度一致以便对齐
+	logColumn := container.NewGridWithRows(2, sysInfoCard, heartbeatLogCard)
+	configColumn := container.NewGridWithRows(2, heartbeatConfigCard, timeSyncCard)
 
-	heartbeatConfigPadded := container.NewPadded(heartbeatConfigCard)
+	mainContent := container.NewGridWithColumns(2, logColumn, configColumn)
 
-	rightColumn := container.NewBorder(
-		heartbeatConfigPadded,                   // top
-		container.NewPadded(heartbeatLogCard),   // bottom
-		nil,                                     // left
-		nil,                                     // right
-		nil,                                     // center
-	)
-
-	mainContent := container.NewHSplit(leftColumn, rightColumn)
-	mainContent.SetOffset(0.55)
-
+	// 左右两列铺满剩余空间
 	monitorUI := container.NewBorder(
-		topBar, // top
-		nil,    // bottom
-		nil,    // left
-		nil,    // right
-		mainContent,
+		topBar,      // top
+		nil,         // bottom
+		nil,         // left
+		nil,         // right
+		mainContent, // center
 	)
 
 	// 界面加载时自动刷新一次系统信息
 	refreshSysInfo()
 
-	// 使用内边距包裹，左右两列内容铺满整页
-	return container.NewPadded(monitorUI)
+	return monitorUI
 }

@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"go-uposs/utils"
+	"go-uposs/internal/utils"
 	"net/http"
 	"strings"
 	"time"
@@ -233,6 +233,6 @@ func createAPIConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		apiLogText,   // center
 	)
 
-	// 使用内边距包裹，避免底部出现多余空白
-	return container.NewPadded(apiConfigUI)
+	// 日志文本框放在 center，铺满页面剩余空间（外层 Tab 已统一添加内边距）
+	return apiConfigUI
 }
