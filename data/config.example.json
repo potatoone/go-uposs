@@ -13,7 +13,7 @@
   "pic_size": 1024,
   "start_time": "2025.04.24",
   "end_time": "2025.04.24",
-  "io_buffer": 409600,
+  "io_buffer": 1024,
   "cpu_threads": 0,
   "copy_concurrency": 1,
   "compress_concurrency": 1,

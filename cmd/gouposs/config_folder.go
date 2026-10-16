@@ -95,13 +95,15 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 				config.RemoteFolder = remoteFolderEntry.Text
 				config.LocalFolder = localFolderEntry.Text
 
-				// 获取用户输入的缓冲区大小
-				ioBuffer, err := strconv.Atoi(ioBufferEntry.Text)
-				if err != nil {
-					updateLog(folderLogText, "[文件夹配置]", fmt.Sprintf("无效的缓冲区大小: %s", err.Error()))
+				// 获取用户输入的缓冲区大小（单位 KB），并限制在合理范围内
+				ioBufferKB, err := strconv.Atoi(strings.TrimSpace(ioBufferEntry.Text))
+				if err != nil || ioBufferKB < minIOBufferKB || ioBufferKB > maxIOBufferKB {
+					updateLog(folderLogText, "[文件夹配置]",
+						fmt.Sprintf("无效的缓冲区大小，请输入 %d-%d 之间的整数（KB，每个并发复制各占一块）",
+							minIOBufferKB, maxIOBufferKB))
 					return
 				}
-				config.IOBuffer = ioBuffer * 1024 // 将KB转换为字节
+				config.IOBuffer = ioBufferKB * 1024 // 将KB转换为字节
 
 				// 获取用户输入的 CPU 线程数
 				cpuThreads, err := strconv.Atoi(strings.TrimSpace(cpuThreadsEntry.Text))
@@ -182,7 +184,8 @@ func createFolderConfigUI(config *Config, myWindow fyne.Window) fyne.CanvasObjec
 	// 创建 remoteFolderEntry 和 localFolderEntry 的标签和输入框，并将保存按钮放在右边
 	remoteFolderContainer := fdlabeledEntry("Remote Folder:", remoteFolderEntry)
 	localFolderContainer := fdlabeledEntry("Local Folder:", localFolderEntry)
-	ioBufferContainer := fdlabeledEntryWithTail("IO Buffer:", ioBufferEntry, widget.NewLabel("KB"), fdunitWidth)
+	ioBufferContainer := fdlabeledEntryWithTail("IO Buffer:", ioBufferEntry,
+		widget.NewLabel(fmt.Sprintf("KB（%d-%d）", minIOBufferKB, maxIOBufferKB)), 110)
 	cpuThreadsContainer := perfLabeledEntry("CPU 线程数:", cpuThreadsEntry, fmt.Sprintf("1-%d", runtime.NumCPU()))
 	copyConcurrencyContainer := perfLabeledEntry("复制并发数:", copyConcurrencyEntry, fmt.Sprintf("1-%d", maxFileConcurrency))
 	compressConcurrencyContainer := perfLabeledEntry("压缩并发数:", compressConcurrencyEntry, fmt.Sprintf("1-%d", maxFileConcurrency))

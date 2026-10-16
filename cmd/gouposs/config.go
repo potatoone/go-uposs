@@ -13,6 +13,15 @@ import (
 // maxFileConcurrency 复制、压缩、上传文件时允许的最大并发数量
 const maxFileConcurrency = 32
 
+// 复制缓冲区大小的取值范围（配置与界面均以 KB 为单位）
+// 每个并发复制协程都会各自申请一块该大小的缓冲区，
+// 因此上限必须收紧，避免「配置值 × 并发数」把内存吃满。
+const (
+	minIOBufferKB     = 4    // 最小 4 KB
+	maxIOBufferKB     = 8192 // 最大 8 MB（单协程）
+	defaultIOBufferKB = 1024 // 默认 1 MB
+)
+
 // Config 配置结构体
 type Config struct {
 	MachineCode     string `json:"machine_code"`
@@ -113,6 +122,30 @@ func (config *Config) ApplyRuntimeLimits() {
 	runtime.GOMAXPROCS(config.CPUThreads)
 }
 
+// NormalizeIOBuffer 校正复制缓冲区大小（输入单位为 KB）
+// 每个并发复制协程各持一块缓冲区，取值过大会成倍放大内存占用，因此这里做上下限约束
+func normalizeIOBufferKB(kb int) int {
+	if kb <= 0 {
+		return defaultIOBufferKB
+	}
+	if kb < minIOBufferKB {
+		return minIOBufferKB
+	}
+	if kb > maxIOBufferKB {
+		return maxIOBufferKB
+	}
+	return kb
+}
+
+// NormalizeIOBuffer 按 KB 为单位校正并换算缓冲区字节数
+func (config *Config) NormalizeIOBuffer() {
+	// 此处 IOBuffer 仍为配置中的 KB 值
+	if config.IOBuffer <= 0 {
+		config.IOBuffer = defaultIOBufferKB
+	}
+	config.IOBuffer = normalizeIOBufferKB(config.IOBuffer) * 1024
+}
+
 // LoadConfig 从文件加载配置
 func LoadConfig(filename string) (*Config, error) {
 	// 使用 utils.DataPath 构建完整的配置文件路径
@@ -129,8 +162,8 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 
-	// 将缓冲区大小从KB转换为字节
-	config.IOBuffer *= 1024
+	// 校正缓冲区大小（KB -> 字节，并限制在合理范围内）
+	config.NormalizeIOBuffer()
 
 	// 校正新增的并发配置，未配置时使用默认值
 	config.NormalizePerformanceConfig()
@@ -146,8 +179,8 @@ func SaveConfig(filename string, config *Config) error {
 	// 使用 utils.DataPath 构建完整的配置文件路径
 	configFilePath := filepath.Join(utils.DataPath, filename)
 
-	// 将缓冲区大小从字节转换为KB
-	config.IOBuffer /= 1024
+	// 将缓冲区大小从字节转换为KB，并校正到合法范围
+	config.IOBuffer = normalizeIOBufferKB(config.IOBuffer / 1024)
 
 	// 校正并发配置，避免写入非法值
 	config.NormalizePerformanceConfig()
@@ -157,7 +190,7 @@ func SaveConfig(filename string, config *Config) error {
 		return err
 	}
 
-	// 将缓冲区大小从KB转换为字节
+	// 恢复为字节，供运行时使用
 	config.IOBuffer *= 1024
 
 	return os.WriteFile(configFilePath, data, 0644) // 直接写入文件
