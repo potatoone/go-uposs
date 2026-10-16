@@ -66,8 +66,10 @@ func TestMinioConnection(useSSL bool) (string, error) {
 		return "", err
 	}
 
-	// 获取存储桶列表
-	buckets, err := client.ListBuckets(context.Background())
+	// 获取存储桶列表（同样加上超时，避免服务端无响应时一直挂住）
+	listCtx, listCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	buckets, err := client.ListBuckets(listCtx)
+	listCancel()
 	if err != nil {
 		updateLog(ossLogText, "[MinioClient]", fmt.Sprintf("获取存储桶列表失败: %v", err)) // 更新日志
 		return "", fmt.Errorf("获取存储桶列表失败: %v", err)

@@ -28,17 +28,44 @@ func GetEndTime(config *Config) string {
 }
 
 // SetStartTime 更新开始时间并更新 UI 和配置
+// 若开始时间晚于结束时间则拒绝并提示，避免时间范围为空导致任务静默不处理任何文件
 func SetStartTime(date string, dateLabel *widget.Label, config *Config) {
+	if msg := timeRangeError(date, config.EndTime); msg != "" {
+		updateLog(schedLogText, "[日期配置]", msg)
+		return
+	}
 	dateLabel.SetText(date)
 	config.StartTime = date                                  // 只更新开始时间
 	config.UpdateTimeRange(config.StartTime, config.EndTime) // 更新配置文件中的时间范围
 }
 
 // SetEndTime 更新结束时间并更新 UI 和配置
+// 若结束时间早于开始时间则拒绝并提示
 func SetEndTime(date string, dateLabel *widget.Label, config *Config) {
+	if msg := timeRangeError(config.StartTime, date); msg != "" {
+		updateLog(schedLogText, "[日期配置]", msg)
+		return
+	}
 	dateLabel.SetText(date)
 	config.EndTime = date                                    // 只更新结束时间
 	config.UpdateTimeRange(config.StartTime, config.EndTime) // 更新配置文件中的时间范围
+}
+
+// timeRangeError 校验时间范围（开始不晚于结束），合法时返回空字符串
+func timeRangeError(start, end string) string {
+	startDate, err := time.Parse("2006.01.02", start)
+	if err != nil {
+		return ""
+	}
+	endDate, err := time.Parse("2006.01.02", end)
+	if err != nil {
+		return ""
+	}
+
+	if startDate.After(endDate) {
+		return fmt.Sprintf("开始时间 %s 晚于结束时间 %s，已取消本次修改（该范围内不会处理任何文件）", start, end)
+	}
+	return ""
 }
 
 // GetCleanStartTime 返回配置文件中的清理开始时间
@@ -58,14 +85,24 @@ func GetCleanEndTime(config *Config) string {
 }
 
 // SetCleanStartTime 更新清理开始时间并更新 UI 和配置
+// 若开始时间晚于结束时间则拒绝，避免清理范围为空却无任何提示
 func SetCleanStartTime(date string, dateLabel *widget.Label, config *Config) {
+	if msg := timeRangeError(date, config.CleanEndTime); msg != "" {
+		SysLogToFile("[日期配置] " + msg)
+		return
+	}
 	dateLabel.SetText(date)
 	config.CleanStartTime = date                                            // 只更新清理开始时间
 	config.UpdateCleanTimeRange(config.CleanStartTime, config.CleanEndTime) // 更新配置文件中的清理时间范围
 }
 
 // SetCleanEndTime 更新清理结束时间并更新 UI 和配置
+// 若结束时间早于开始时间则拒绝
 func SetCleanEndTime(date string, dateLabel *widget.Label, config *Config) {
+	if msg := timeRangeError(config.CleanStartTime, date); msg != "" {
+		SysLogToFile("[日期配置] " + msg)
+		return
+	}
 	dateLabel.SetText(date)
 	config.CleanEndTime = date                                              // 只更新清理结束时间
 	config.UpdateCleanTimeRange(config.CleanStartTime, config.CleanEndTime) // 更新配置文件中的清理时间范围
@@ -230,6 +267,9 @@ func CreateCleanDateUI(win fyne.Window, config *Config) fyne.CanvasObject {
 func showGridDialog(win fyne.Window, title string, options []string, columns int, targetButton, yearButton, monthButton, dayButton *widget.Button, dateLabel *widget.Label, config *Config, isStartTime bool) {
 	var items []fyne.CanvasObject
 
+	// 对话框变量先声明，供按钮回调中关闭自身使用
+	var dlg *dialog.CustomDialog
+
 	for _, option := range options {
 		option := option
 		button := widget.NewButton(option, func() {
@@ -258,19 +298,27 @@ func showGridDialog(win fyne.Window, title string, options []string, columns int
 				SetEndTime(dateLabel.Text, dateLabel, config)
 			}
 
-			// 关闭对话框
-			win.Canvas().Overlays().Top().Hide()
+			// 关闭对话框：必须走 Dialog.Hide()，它会把遮罩层从 OverlayStack 中移除。
+			// 直接调用 Overlays().Top().Hide() 只是把遮罩设为不可见而对象仍留在栈里，
+			// 之后所有点击都会被该遮罩拦截，表现为界面假死。
+			if dlg != nil {
+				dlg.Hide()
+			}
 		})
 		items = append(items, button)
 	}
 
 	grid := container.NewGridWithColumns(columns, items...)
-	dialog.ShowCustom(title, "关闭", grid, win)
+	dlg = dialog.NewCustom(title, "关闭", grid, win)
+	dlg.Show()
 }
 
 // showCleanGridDialog 显示清理日期网格选择对话框
 func showCleanGridDialog(win fyne.Window, title string, options []string, columns int, targetButton, yearButton, monthButton, dayButton *widget.Button, dateLabel *widget.Label, config *Config, isStartTime bool) {
 	var items []fyne.CanvasObject
+
+	// 对话框变量先声明，供按钮回调中关闭自身使用
+	var dlg *dialog.CustomDialog
 
 	for _, option := range options {
 		option := option
@@ -300,14 +348,17 @@ func showCleanGridDialog(win fyne.Window, title string, options []string, column
 				SetCleanEndTime(dateLabel.Text, dateLabel, config)
 			}
 
-			// 关闭对话框
-			win.Canvas().Overlays().Top().Hide()
+			// 关闭对话框：必须走 Dialog.Hide()，见 showGridDialog 中的说明
+			if dlg != nil {
+				dlg.Hide()
+			}
 		})
 		items = append(items, button)
 	}
 
 	grid := container.NewGridWithColumns(columns, items...)
-	dialog.ShowCustom(title, "关闭", grid, win)
+	dlg = dialog.NewCustom(title, "关闭", grid, win)
+	dlg.Show()
 }
 
 // 更新选择的日期显示

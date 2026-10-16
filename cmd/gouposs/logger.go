@@ -141,33 +141,120 @@ func logToUIAndFile(logger *Logger, logWidget *widget.Entry, message string, tas
 	// 格式化日志内容，包含时间戳
 	logMessage := fmt.Sprintf("%s %s", time.Now().Format("2006-01-02 15:04:05"), message)
 
-	// 写入日志并换行
+	// 写入日志文件
 	if _, err := file.WriteString(logMessage + "\n"); err != nil {
 		return fmt.Errorf("写入日志失败: %v", err)
 	}
 
-	// 在主线程上更新 UI
-	fyne.Do(func() {
-		// 获取当前日志文本框的内容
-		currentText := logWidget.Text
-
-		// 如果当前文本框内容非空，添加换行符
-		if currentText != "" {
-			currentText += "\n"
-		}
-
-		// 将新日志消息添加到现有内容中
-		lines := strings.Split(currentText+message, "\n")
-		// 限制日志文本框显示行数 taskLogLines
-		if len(lines) > taskLogLines {
-			lines = lines[len(lines)-taskLogLines:]
-		}
-
-		// 更新 UI 组件的文本
-		logWidget.SetText(strings.Join(lines, "\n"))
-	})
+	// UI 更新走批量刷新：
+	// 批量任务时每秒可能产生上百条日志，逐条 SetText 会让主线程忙于重排文本、拖慢界面。
+	enqueueUILog(logWidget, message, taskLogLines)
 
 	return nil
+}
+
+// ==================== UI 日志批量刷新 ====================
+//
+// 批量任务（复制/压缩/上传）每秒可能写入上百条日志，
+// 若每条都调用一次 fyne.Do + SetText，主线程会被大量文本重排与重绘占满，
+// 表现为界面卡顿、切换标签页无响应。
+// 这里把日志先入队，由后台协程按固定间隔合并刷新一次。
+
+const uiLogFlushInterval = 300 * time.Millisecond
+
+// uiLogBuffer 单个日志框的待刷新队列
+type uiLogBuffer struct {
+	mu    sync.Mutex
+	lines []string
+	limit int
+	flush bool // 是否有待刷新内容
+}
+
+var (
+	uiLogBuffersMu sync.Mutex
+	uiLogBuffers   = make(map[*widget.Entry]*uiLogBuffer)
+	uiLogFlusher   sync.Once
+)
+
+// enqueueUILog 将日志加入刷新队列
+func enqueueUILog(widget *widget.Entry, message string, limit int) {
+	if widget == nil {
+		return
+	}
+
+	uiLogBuffersMu.Lock()
+	buf, ok := uiLogBuffers[widget]
+	if !ok {
+		buf = &uiLogBuffer{}
+		uiLogBuffers[widget] = buf
+	}
+	uiLogBuffersMu.Unlock()
+
+	buf.mu.Lock()
+	buf.lines = append(buf.lines, message)
+	// 队列只需保留最近 limit 行，避免长时间任务堆积过多文本
+	if len(buf.lines) > limit {
+		buf.lines = buf.lines[len(buf.lines)-limit:]
+	}
+	buf.limit = limit
+	buf.flush = true
+	buf.mu.Unlock()
+
+	// 首次使用时启动统一的刷新协程
+	uiLogFlusher.Do(func() {
+		go func() {
+			ticker := time.NewTicker(uiLogFlushInterval)
+			defer ticker.Stop()
+			for range ticker.C {
+				flushUILogs()
+			}
+		}()
+	})
+}
+
+// flushUILogs 把各日志框队列中的内容一次性合并写回控件
+func flushUILogs() {
+	uiLogBuffersMu.Lock()
+	widgets := make([]*widget.Entry, 0, len(uiLogBuffers))
+	for w := range uiLogBuffers {
+		widgets = append(widgets, w)
+	}
+	uiLogBuffersMu.Unlock()
+
+	for _, w := range widgets {
+		uiLogBuffersMu.Lock()
+		buf := uiLogBuffers[w]
+		uiLogBuffersMu.Unlock()
+		if buf == nil {
+			continue
+		}
+
+		buf.mu.Lock()
+		if !buf.flush || len(buf.lines) == 0 {
+			buf.mu.Unlock()
+			continue
+		}
+		pending := buf.lines
+		buf.lines = nil
+		buf.flush = false
+		limit := buf.limit
+		buf.mu.Unlock()
+
+		// 读取控件当前文本并写回都必须发生在主线程，避免跨线程访问控件状态
+		uiWidget, uiPending, uiLimit := w, strings.Join(pending, "\n"), limit
+		fyne.Do(func() {
+			currentText := uiWidget.Text
+			if currentText != "" {
+				currentText += "\n"
+			}
+
+			lines := strings.Split(currentText+uiPending, "\n")
+			if len(lines) > uiLimit {
+				lines = lines[len(lines)-uiLimit:]
+			}
+			uiWidget.SetText(strings.Join(lines, "\n"))
+		})
+	}
 }
 
 // AutoLogToUIAndFile 向自动任务日志和 UI 日志写入消息

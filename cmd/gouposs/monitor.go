@@ -169,7 +169,8 @@ func (h *heartbeatState) stop() {
 func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	// ---------- 系统信息显示 ----------
 	sysInfoText := widget.NewMultiLineEntry()
-	sysInfoText.SetMinRowsVisible(11)
+	// 12 行 = 5 项主机/CPU 信息 + 内存 + 6 个磁盘盘符，正好铺满常见内容且不留下空白
+	sysInfoText.SetMinRowsVisible(12)
 	sysInfoText.Disable() // 只读
 
 	// 采集时间标签
@@ -435,7 +436,7 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		heartbeatConfigBox,
 	)
 
-	// 系统信息卡片：内容铺满整块卡片
+	// 系统信息卡片：输入框按 12 行内容高度显示，卡片不额外留白
 	sysInfoCard := container.NewBorder(
 		widget.NewLabelWithStyle("系统信息", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		nil, nil, nil,
@@ -448,7 +449,7 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 		timeSyncBox,
 	)
 
-	// 心跳日志卡片：内容铺满整块卡片
+	// 心跳日志卡片：输入框铺满卡片（卡片高度由布局决定，吃掉左列剩余高度）
 	heartbeatLogCard := container.NewBorder(
 		widget.NewLabelWithStyle("心跳日志", fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 		nil, nil, nil,
@@ -456,9 +457,9 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	)
 
 	// 合并布局：左列两个文本框（上=系统信息、下=心跳日志），右列两个配置（上=心跳配置、下=时间同步）
-	// 使用等宽网格（无分隔条、不可拖动），宽度固定为各占一半；左右两列高度一致以便对齐
-	logColumn := container.NewGridWithRows(2, sysInfoCard, heartbeatLogCard)
-	configColumn := container.NewGridWithRows(2, heartbeatConfigCard, timeSyncCard)
+	// 宽度固定为各占一半；同列卡片按内容高度从上往下紧密排列，多余高度只给最后一个卡片，避免出现大片空白
+	logColumn := container.New(topAlignFillLayout{}, sysInfoCard, heartbeatLogCard)
+	configColumn := container.New(topAlignFillLayout{}, heartbeatConfigCard, timeSyncCard)
 
 	mainContent := container.NewGridWithColumns(2, logColumn, configColumn)
 
@@ -475,4 +476,43 @@ func createMonitorUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	refreshSysInfo()
 
 	return monitorUI
+}
+
+// topAlignFillLayout 垂直布局：前面所有对象按最小高度从上往下紧密排列，剩余高度全部给最后一个对象
+// 用于同列多张卡片时，卡片不会被子对象撑开留下空白（系统信息、心跳日志等日志框尤其明显）
+type topAlignFillLayout struct{}
+
+func (l topAlignFillLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	min := fyne.NewSize(0, 0)
+	for _, o := range objects {
+		if !o.Visible() {
+			continue
+		}
+		ms := o.MinSize()
+		min.Width = fyne.Max(min.Width, ms.Width)
+		min.Height += ms.Height
+	}
+	return min
+}
+
+func (l topAlignFillLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	var pos float32
+	last := -1
+	for i, o := range objects {
+		if o.Visible() {
+			last = i
+		}
+	}
+	for i, o := range objects {
+		if !o.Visible() {
+			continue
+		}
+		h := o.MinSize().Height
+		if i == last {
+			h = fyne.Max(h, size.Height-pos) // 最后一个对象吃掉剩余高度
+		}
+		o.Move(fyne.NewPos(0, pos))
+		o.Resize(fyne.NewSize(size.Width, h))
+		pos += h
+	}
 }

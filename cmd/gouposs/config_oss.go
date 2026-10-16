@@ -99,15 +99,19 @@ func CreateUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	})
 
 	// 创建测试连接按钮
+	// 连接测试涉及网络请求（最长 10 秒超时、且服务端异常时可能更久），
+	// 必须放到后台执行，否则会阻塞 UI 线程导致界面假死
 	testButton := widget.NewButton("测试连接", func() {
 		updateLog(ossLogText, "[OSS配置]", "测试连接中...") // 使用统一的日志更新函数
 		useSSL := useSSLCheck.Checked
-		result, err := TestMinioConnection(useSSL)
-		if err != nil {
-			updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("错误: %s", err.Error()))
-		} else {
+		go func() {
+			result, err := TestMinioConnection(useSSL)
+			if err != nil {
+				updateLog(ossLogText, "[OSS配置]", fmt.Sprintf("错误: %s", err.Error()))
+				return
+			}
 			updateLog(ossLogText, "[OSS配置]", result)
-		}
+		}()
 	})
 
 	refreshButton := widget.NewButtonWithIcon("", theme.ViewRefreshIcon(), func() {

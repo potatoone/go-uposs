@@ -29,11 +29,15 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 	InitAutoLogger(utils.AutoLogPath)
 
 	// 更新任务结束时的UI状态
+	// 该方法可能被任务协程调用，因此统一在这里切回主线程，避免跨线程操作控件
 	updateUIOnTaskEnd := func() {
-		autoProgressBar.Stop()
-		autoScanButton.SetText("开始任务")
-		autoScanButton.Importance = widget.MediumImportance
-		autoScanButton.Refresh()
+		fyne.Do(func() {
+			autoProgressBar.Stop()
+			autoScanButton.SetText("开始任务")
+			autoScanButton.Importance = widget.MediumImportance
+			autoScanButton.Enable()
+			autoScanButton.Refresh()
+		})
 		AutoLogToFile("任务已停止")
 	}
 
@@ -137,6 +141,7 @@ func createautoTaskUI(myWindow fyne.Window, config *Config) fyne.CanvasObject {
 
 					// 当前执行周期完成
 					AutoLogToFile("当前执行周期已完成 ✅")
+					ReleaseMemory() // 单轮结束，把空闲内存归还系统
 
 					// 获取间隔时间
 					interval, err := strconv.Atoi(newConfig.AutoInterval)

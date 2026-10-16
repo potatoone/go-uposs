@@ -208,9 +208,13 @@ func main() {
 		MainLogToFile("程序启动时已最小化到系统托盘")
 
 		// 检查是否自动执行任务
+		// 注意：启动任务会立即读写多个控件（按钮状态、进度条等），必须在主线程执行；
+		// 任务本身在 startAutoTask 内部已用协程运行，这里不能再套 goroutine
 		if shouldAutoRunTask {
 			MainLogToFile("触发自动任务执行...")
-			go triggerAutoTask()
+			fyne.Do(func() {
+				triggerAutoTask()
+			})
 		}
 	})
 

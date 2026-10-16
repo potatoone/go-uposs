@@ -29,12 +29,16 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 	InitSchedLogger(utils.SchedLogPath)
 
 	// 更新任务结束时的UI状态
+	// 该方法可能被任务协程调用，因此统一在这里切回主线程，避免跨线程操作控件
 	updateUIOnTaskEnd := func() {
-		scanButton.SetText("开始任务")
-		scanButton.Importance = widget.MediumImportance
-		scanButton.Refresh()
+		fyne.Do(func() {
+			scanButton.SetText("开始任务")
+			scanButton.Importance = widget.MediumImportance
+			scanButton.Enable()
+			scanButton.Refresh()
+			progressBar.Stop()
+		})
 		SchedLogToFile("任务已停止")
-		progressBar.Stop()
 	}
 
 	// 启动自动任务的功能
@@ -163,6 +167,7 @@ func createSchedUI(config *Config, myWindow fyne.Window) fyne.CanvasObject {
 			}
 
 			SchedLogToFile("所有计划任务已完成 ✅")
+			ReleaseMemory() // 任务结束，把空闲内存归还系统
 			updateUIOnTaskEnd()
 		}()
 
